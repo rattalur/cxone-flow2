@@ -6,7 +6,6 @@ class OrchestrationDispatch:
 
     __log = logging.getLogger("OrchestrationDispatch")
 
-    # should maintain state, talks to config, makes cxoneclient
     @staticmethod
     async def execute(orchestrator, signature_value, headers_func, json_payload_func, raw_payload_func):
 

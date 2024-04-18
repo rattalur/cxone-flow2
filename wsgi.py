@@ -8,12 +8,19 @@ from _version import __version__
 from flask import Flask, request, Response
 from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator
 import json, logging
+from config import CxOneFlowConfig
+
+
 
 __app_name__ = f"cxone-flow/{__version__}"
 
 __log = logging.getLogger(__app_name__)
 
+CxOneFlowConfig.bootstrap()
+
 app = Flask(__app_name__)
+
+
 
 @app.get("/ping")
 def ping():

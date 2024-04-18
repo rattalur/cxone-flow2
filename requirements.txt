@@ -1,2 +1,5 @@
 flask[async]
 pytest
+pyyaml
+password-strength
+

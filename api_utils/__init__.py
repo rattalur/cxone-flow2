@@ -22,6 +22,11 @@ def auth_bearer(token):
 def verify_signature(signature_header, secret, body):
     (algorithm, hash) = signature_header.split("=")
 
+    import hashlib
+
+    if not algorithm in hashlib.algorithms_available:
+        return False
+
     generated_hash = signature.get(algorithm, secret, body)
 
     return generated_hash == hash

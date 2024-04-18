@@ -1,4 +1,4 @@
-import hashlib, hmac
+import hmac
 
 class signature:
 
