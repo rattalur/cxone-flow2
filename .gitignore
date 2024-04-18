@@ -1,3 +1,10 @@
+# yaml files in root
+*.yaml
+*.yml
+
+# secrets
+**/secrets
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
