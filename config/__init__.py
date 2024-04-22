@@ -1,5 +1,6 @@
 from _version import __version__
 from pathlib import Path
+import re
 import yaml, logging, cxone_api as cx, os
 from scm_services import Cloner, bitbucketdc_service_factory
 from api_utils import auth_bearer, auth_basic, APISession
@@ -32,7 +33,8 @@ class ConfigurationException(Exception):
     def invalid_keys(key_path, keys):
         return ConfigurationException(f"These keys are invalid: {["/".join([key_path, x]) for x in keys]}")
 
-
+class RouteNotFoundException(Exception):
+    pass
 
 class CxOneFlowConfig:
 
@@ -40,6 +42,22 @@ class CxOneFlowConfig:
 
     __shared_secret_policy = PasswordPolicy.from_names(length=20, uppercase=3, numbers=3, special=2)
 
+
+    @staticmethod
+    async def retrieve_services_by_route(clone_urls):
+
+        if type(clone_urls) is list:
+            it_list = clone_urls
+        else:
+            it_list = [clone_urls]
+
+        for url in it_list:
+            for entry in CxOneFlowConfig.__ordered_scm_config_tuples:
+                if entry[0].match(url):
+                    return entry[1], entry[2]
+
+        CxOneFlowConfig.__log.error(f"No route matched for {clone_urls}")
+        raise RouteNotFoundException(clone_urls)
 
     @staticmethod
     def bootstrap(config_file_path = "./config.yaml"):
@@ -207,7 +225,7 @@ class CxOneFlowConfig:
                 CxOneFlowConfig.__get_secret_from_value_of_key_or_fail({config_path}, 'password', clone_auth_dict) )
 
         if 'token' in auth_type_keys:
-            return Cloner.using_token_auth(CxOneFlowConfig.__get_secret_from_value_of_key_or_fail({config_path}, 'token', clone_auth_dict))
+            return Cloner.using_token_auth(CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(config_path, 'token', clone_auth_dict))
 
         if 'ssh' in auth_type_keys:
             return Cloner.using_ssh_auth(CxOneFlowConfig.__get_secret_from_value_of_key_or_fail({config_path}, 'ssh', clone_auth_dict))
@@ -216,7 +234,7 @@ class CxOneFlowConfig:
 
     @staticmethod
     def __setup_scm(scm_service_factory, config_dict, config_path):
-        repo_match_spec = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'repo-match', config_dict)
+        repo_matcher = re.compile(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'repo-match', config_dict), re.IGNORECASE)
 
         cxone_client = CxOneFlowConfig.__cxone_client_factory(f"{config_path}/cxone", 
                                                             **(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'cxone', config_dict)))
@@ -248,12 +266,15 @@ class CxOneFlowConfig:
         if not len(secret_test_result) == 0:
             raise ConfigurationException(f"{config_path}/connection/shared-secret fails some complexity requirements: {secret_test_result}")
         
-        clone_auth_dict = CxOneFlowConfig.__get_value_for_key_or_default('clone-auth', connection_config_dict, api_auth_dict)
-
+        clone_auth_dict = CxOneFlowConfig.__get_value_for_key_or_default('clone-auth', connection_config_dict, None)
+        clone_config_path = f"{config_path}/connection/clone-auth"
+        if clone_auth_dict is None:
+            clone_auth_dict = api_auth_dict
+            clone_config_path = f"{config_path}/connection/api-auth"
                
-        scm_service = scm_service_factory(api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(clone_auth_dict, config_path))
+        scm_service = scm_service_factory(api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(clone_auth_dict, clone_config_path))
       
-        CxOneFlowConfig.__ordered_scm_config_tuples.append((repo_match_spec, cxone_service, scm_service))
+        CxOneFlowConfig.__ordered_scm_config_tuples.append((repo_matcher, cxone_service, scm_service))
 
         
     __scm_service_factories = {'bbdc' : bitbucketdc_service_factory }

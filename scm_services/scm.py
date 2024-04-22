@@ -12,8 +12,18 @@ class RetriesExhausted(Exception):
 class SCMService:
     __log = logging.getLogger(__name__)
 
-    def __init__(self, api_session, base_api_url, shared_secret, cloner):
+    def __init__(self, api_session, shared_secret, cloner):
         self.__session = api_session
+        self.__shared_secret = shared_secret
+        self.__cloner = cloner
+
+    @property
+    def cloner(self):
+        return self.__cloner
+    
+    @property
+    def shared_secret(self):
+        return self.__shared_secret
 
     async def __exec_request(self, request):
         prepared_request = self.__session.prepare_request(request)
@@ -52,12 +62,14 @@ class SCMService:
                                                 auth=self.__session.auth, \
                                                 headers = extra_headers))
     
-    async def get_protected_branches(self, *args, **kwargs):
+    async def get_protected_branches(self, project, slug):
         raise NotImplementedError("get_protected_branches")
 
-
-    async def get_default_branch(self, *args, **kwargs):
+    async def get_default_branch(self, project, slug):
         raise NotImplementedError("get_default_branch")
+    
+    async def validate_signature(self, headers, raw_payload):
+        raise NotImplementedError("validate_signature")
 
 
 
