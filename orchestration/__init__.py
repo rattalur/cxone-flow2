@@ -19,17 +19,3 @@ class OrchestrationDispatch:
         return orchestrator.execute(None, headers_func(), json_payload_func())
 
 
-
-class ScanOrchestration:
-    """
-    Uses an SCMService instance and a CxOneClient instance to orchestrate scanning
-    """
-    pass
-
-
-class TagOrchestration:
-    """
-    Given parameters that were used to tag scans and a CxOneClient instance, orchestrates
-    tagging of scans.
-    """
-    pass

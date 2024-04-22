@@ -12,8 +12,8 @@ class RetriesExhausted(Exception):
 class SCMService:
     __log = logging.getLogger(__name__)
 
-    def __init__(self, session):
-        self.__session = session
+    def __init__(self, api_session, base_api_url, shared_secret, cloner):
+        self.__session = api_session
 
     async def __exec_request(self, request):
         prepared_request = self.__session.prepare_request(request)

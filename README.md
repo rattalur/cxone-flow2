@@ -119,16 +119,23 @@ The value specifies a file name found under the path defined by secret-root-path
 
 Two distinct key/value pairs each specifying a file name found under the path defined by secret-root-path.
 
+
+#### clone-auth
+Optional.  Default: The options specified by api-auth.
+
+##### token
+
+The value specifies a file name found under the path defined by secret-root-path.
+
+##### username/password
+
+Two distinct key/value pairs each specifying a file name found under the path defined by secret-root-path.
+
 ##### ssh
 
 The value specifies a file name found under the path defined by secret-root-path.  The file
 should contain an unencrypted private key.
 
-
-#### clone-auth
-Optional.  Default: The options specified by api-auth.
-
-The options in this dictionary are the same as those found in api-auth.
 
 ### cxone
 
@@ -225,10 +232,9 @@ YAML is parsed by transforming it to JSON [using an online conversion tool](http
 
 
 ```
-
 secret-root-path: /run/secrets
 
-general-connection-params: &general-connection
+cxone-general-connection-params: &cxone-general-connection
   timeout-seconds: 60
   retries: 3
   ssl-verify: True
@@ -237,26 +243,26 @@ general-connection-params: &general-connection
     https: http://192.168.112.234:8080
 
 
-connection-setup: &connection
+scm-connection: &scm-connection
   base-url: http://whatever:port
   shared-secret: mysharedsecret
   <<: *general-connection
 
 dp: &cxone_test_tenant
   tenant: dp
-  api-key: secret
+  api-key: test_api_key
   iam-endpoint: US
   api-endpoint: US
-  <<: *general-connection
+  <<: *cxone-general-connection
 
 cx_ps: &cxone_prod_tenant
   tenant: cx_ps
   oauth:
-    client-id: secret
-    client-secret: secret
+    client-id: prod_client_id
+    client-secret: prod_client_secret
   iam-endpoint: US
   api-endpoint: US
-  <<: *general-connection
+  <<: *cxone-general-connection
 
 
 project-a-api: &bbdc-project-a-api
@@ -271,6 +277,7 @@ project-b-api: &bbdc-project-b-api
 
 project-b-clone: &bbdc-project-b-clone
   ssh: ssh_key_secret
+  token: token_secret
 
 scan-defaults: &scm-defaults
   update-project-clone-creds: True
@@ -288,7 +295,7 @@ bbdc:
     scan-config:
       <<: *scm-defaults
     connection:
-      <<: *connection
+      <<: *scm-connection
       api-auth:
         <<: *bbdc-project-a-api
       clone-auth:
@@ -300,11 +307,12 @@ bbdc:
     scan-config:
       <<: *scm-defaults
     connection:
-      <<: *connection
+      <<: *scm-connection
       api-auth:
         <<: *bbdc-project-b-api
       clone-auth:
         <<: *bbdc-project-b-clone
     cxone:
       <<: *cxone_test_tenant
+
 ```
