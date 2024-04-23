@@ -127,9 +127,14 @@ Optional.  Default: The options specified by api-auth.
 
 The value specifies a file name found under the path defined by secret-root-path.
 
-##### username/password
+##### username
 
-Two distinct key/value pairs each specifying a file name found under the path defined by secret-root-path.
+A file name found under the path defined by secret-root-path.  If supplied with a token, the username will be
+used when forming the credentials in the clone URL.
+
+##### password
+
+A file name found under the path defined by secret-root-path.
 
 ##### ssh
 
