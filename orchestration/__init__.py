@@ -10,22 +10,17 @@ class OrchestrationDispatch:
     @staticmethod
     async def execute(orchestrator):
 
+        if orchestrator.is_diagnostic:
+            return 200
+
         OrchestrationDispatch.__log.debug(f"Service lookup: {orchestrator.route_urls}")
         cxone_service, scm_service = await CxOneFlowConfig.retrieve_services_by_route(orchestrator.route_urls)
         OrchestrationDispatch.__log.debug(f"Service lookup success: {orchestrator.route_urls}")
 
-        if orchestrator.is_signature_valid(scm_service.shared_secret):
-            pass
+        if await orchestrator.is_signature_valid(scm_service.shared_secret):
+            return await orchestrator.execute(cxone_service, scm_service)
         else:
             OrchestrationDispatch.__log.warn(f"Payload signature validation failed, webhook payload ignored.")
-
-        # if verify_signature(signature_value, "password", raw_payload_func()):
-        #     OrchestrationDispatch.__log.debug("Payload signature verified.")
-        # else:
-        #     OrchestrationDispatch.__log.error("Signature validation failure, rejecting webhook request.")
-        #     return 403
-
-        # return orchestrator.execute(None, None, headers, raw_payload)
 
         return 204
 

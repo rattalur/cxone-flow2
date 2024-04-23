@@ -2,4 +2,4 @@ flask[async]
 pytest
 pyyaml
 password-strength
-
+jsonpath-ng

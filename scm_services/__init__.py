@@ -18,11 +18,11 @@ class Cloner:
         pass
 
     @staticmethod
-    def using_token_auth(token):
+    def using_token_auth(token, username):
         pass
 
     @staticmethod
-    def using_ssh_auth(ssh_private_key):
+    def using_ssh_auth(ssh_private_key_file):
         Cloner.__use_ssh = True
         pass
 
