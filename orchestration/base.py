@@ -53,11 +53,12 @@ class OrchestratorBase:
 
                 await scm_service.cloner.reset_head(code_path, commit_hash)
 
-                with zipfile.ZipFile("/tmp/test.zip", mode="w") as upload_payload:
-                    zip_entries = OrchestratorBase.__get_path_dict(code_path)
-                    for entry_key in zip_entries.keys():
-                        upload_payload.write(entry_key, zip_entries[entry_key])
-                    pass
+                with tempfile.NamedTemporaryFile(suffix='.zip') as zip_file:
+                    with zipfile.ZipFile(zip_file, mode="w") as upload_payload:
+                        zip_entries = OrchestratorBase.__get_path_dict(code_path)
+                        for entry_key in zip_entries.keys():
+                            upload_payload.write(entry_key, zip_entries[entry_key])
+                        pass
 
 
             # scan with:
