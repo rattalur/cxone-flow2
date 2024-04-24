@@ -401,6 +401,20 @@ class CxOneClient:
         url = CxOneClient.__join_query_dict(url, kwargs)
         return await self.__exec_request(requests.post, url, json=payload)
 
+    async def get_upload_link(self):
+        url = urljoin(self.api_endpoint, "uploads")
+        return await self.__exec_request(requests.post, url)
+    
+    async def upload_zip(self, zip_path):
+        upload_url = (await self.get_upload_link()).json()['url']
+
+        with open(zip_path, "rb") as zip_to_upload:
+            upload_response = await self.__exec_request(requests.put, upload_url, data=zip_to_upload)
+            if not upload_response.ok:
+                return None
+
+        return upload_url
+
     async def get_sast_scan_log(self, scanid, stream=False):
         url = urljoin(self.api_endpoint, f"logs/{scanid}/sast")
         response = await self.__exec_request(requests.get, url)
@@ -422,6 +436,7 @@ class CxOneClient:
         url = urljoin(self.api_endpoint, f"scans/{scanid}/workflow")
         url = CxOneClient.__join_query_dict(url, kwargs)
         return await self.__exec_request(requests.get, url)
+
 
 class ProjectRepoConfig:
 

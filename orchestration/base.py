@@ -1,7 +1,10 @@
-import zipfile, tempfile
+import zipfile, tempfile, logging
 from pathlib import Path, PurePath
 
+
 class OrchestratorBase:
+
+    __log = logging.getLogger("OrchestratorBase")
 
     def __init__(self, headers, webhook_payload):
         self.__webhook_payload = webhook_payload
@@ -48,7 +51,8 @@ class OrchestratorBase:
         commit_branch, commit_hash = await self._get_target_branch_and_hash()
 
         if commit_branch in protected_branches:
-            async with scm_service.cloner.clone(self._repo_clone_url(scm_service.cloner.clone_protocol)) as clone_worker:
+            clone_url = self._repo_clone_url(scm_service.cloner.clone_protocol)
+            async with scm_service.cloner.clone(clone_url) as clone_worker:
                 code_path = await clone_worker.loc()
 
                 await scm_service.cloner.reset_head(code_path, commit_hash)
@@ -56,16 +60,14 @@ class OrchestratorBase:
                 with tempfile.NamedTemporaryFile(suffix='.zip') as zip_file:
                     with zipfile.ZipFile(zip_file, mode="w") as upload_payload:
                         zip_entries = OrchestratorBase.__get_path_dict(code_path)
+
+                        OrchestratorBase.__log.debug(f"[{clone_url}][{commit_branch}][{commit_hash}] zipping for scan: {zip_entries}")
+
                         for entry_key in zip_entries.keys():
                             upload_payload.write(entry_key, zip_entries[entry_key])
-                        pass
+                        
+                        scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, commit_branch, commit_hash)
 
-
-            # scan with:
-            # * hash has a tag
-            # * branch name
-            # * service adds rest of config options to scan, creates project with tags if needed.
-            # 
         return 204
 
     async def _execute_pr_scan_workflow(self, cxone_service, scm_service):
