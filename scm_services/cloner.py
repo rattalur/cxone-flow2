@@ -54,6 +54,10 @@ class Cloner:
         retval.__fix_clone_url = lambda url: url
 
         return retval
+    
+    @property
+    def clone_protocol(self):
+        return self.__protocol
 
     def clone(self, clone_url):
         Cloner.__log.debug(f"Cloning: {clone_url}")
@@ -65,6 +69,17 @@ class Cloner:
                                    capture_output=True, env=self.__env, check=True)
         
         return Cloner.__clone_worker(thread, clone_output_loc)
+
+    async def reset_head(self, code_path, hash):
+        try:
+            result = await (asyncio.to_thread(subprocess.run, ["git", "reset", "--hard", hash], \
+                                capture_output=True, env=self.__env, check=True, cwd=code_path))
+            
+            self.__log.debug(f"Reset task: return code [{result.returncode}] stdout: [{result.stdout}] stderr: [{result.stderr}]")
+
+        except subprocess.CalledProcessError as ex:
+            self.__log.error(f"{ex} stdout: [{ex.stdout.decode('UTF-8')}] stderr: [{ex.stderr.decode('UTF-8')})]")
+            raise
 
     class __clone_worker:
 
@@ -81,6 +96,7 @@ class Cloner:
                 return self.__clone_out_tempdir.name
             except subprocess.CalledProcessError as ex:
                 self.__log.error(f"{ex} stdout: [{ex.stdout.decode('UTF-8')}] stderr: [{ex.stderr.decode('UTF-8')})]")
+                raise
 
         async def __aenter__(self):
             return self

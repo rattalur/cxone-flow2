@@ -229,7 +229,8 @@ class CxOneFlowConfig:
                                            CxOneFlowConfig.__get_value_for_key_or_default('username', clone_auth_dict, None))
 
         if 'ssh' in auth_type_keys:
-            return Cloner.using_ssh_auth(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'ssh', clone_auth_dict))
+            return Cloner.using_ssh_auth(Path(CxOneFlowConfig.__secret_root) / 
+                                         Path(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'ssh', clone_auth_dict)))
 
         raise ConfigurationException(f"{config_path} SCM clone authorization configuration is invalid!")
 

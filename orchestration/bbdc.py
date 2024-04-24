@@ -71,22 +71,21 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
 
     @property
-    async def _repo_project_key(self):
+    def _repo_project_key(self):
         return self.__repo_project_key
 
     @property
-    async def _repo_slug(self):
+    def _repo_slug(self):
         return self.__repo_slug
 
-    @property
-    async def _repo_clone_uri(self, protocol=None):
+    def _repo_clone_url(self, protocol=None):
         if protocol is None or protocol not in self.__clone_urls.keys():
             return self.__route_urls[0]
         else:
             return self.__clone_urls[protocol]
         
     @property
-    async def _repo_name(self):
+    def _repo_name(self):
         return self.__repo_name
         
     @property
