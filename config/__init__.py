@@ -1,4 +1,5 @@
 from _version import __version__
+from _agent import __agent__
 from pathlib import Path
 import re
 import yaml, logging, cxone_api as cx, os
@@ -128,7 +129,7 @@ class CxOneFlowConfig:
         iam_endpoint_value = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'iam-endpoint', kwargs)
         tenant_auth_endpoint = None
         if iam_endpoint_value in cx.AuthRegionEndpoints.keys():
-            tenant_auth_endpoint = cx.AuthRegionEndpoints[iam_endpoint_value]
+            tenant_auth_endpoint = cx.AuthRegionEndpoints[iam_endpoint_value](tenant_name)
         else:
             tenant_auth_endpoint = cx.CxOneAuthEndpoint(tenant_name, iam_endpoint_value)
 
@@ -136,14 +137,14 @@ class CxOneFlowConfig:
         api_endpoint_value = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'api-endpoint', kwargs)
         tenant_api_endpoint = None
         if api_endpoint_value in cx.ApiRegionEndpoints.keys():
-            tenant_api_endpoint = cx.ApiRegionEndpoints[api_endpoint_value]
+            tenant_api_endpoint = cx.ApiRegionEndpoints[api_endpoint_value]()
         else:
             tenant_api_endpoint = cx.CxOneApiEndpoint(api_endpoint_value)
 
         if 'api-key' in kwargs.keys():
             return cx.CxOneClient.create_with_api_key(
                 CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(config_path, 'api-key', kwargs), \
-                __name__, __version__, \
+                __agent__, __version__, \
                 tenant_auth_endpoint, \
                 tenant_api_endpoint, \
                 CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', kwargs, 60), \
@@ -158,7 +159,7 @@ class CxOneFlowConfig:
 
             return cx.CxOneClient.create_with_oauth(
                 oauth_id, oauth_secret, \
-                __name__, __version__, \
+                __agent__, __version__, \
                 tenant_auth_endpoint, \
                 tenant_api_endpoint, \
                 CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', kwargs, 60), \
