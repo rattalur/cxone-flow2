@@ -77,7 +77,6 @@ class OrchestratorBase:
 
                     check = perf_counter_ns()
 
-                    # TODO: react to submit result
                     scan_tags = {
                         "commit" : commit_hash,
                         "workflow" : "push-protected-branch",
@@ -88,6 +87,9 @@ class OrchestratorBase:
                                                                     commit_branch, clone_url, scan_tags)
 
                     await Status.report(cxone_service.moniker, "scan-start", perf_counter_ns() - check)
+
+                    OrchestratorBase.__log.debug(scan_submit)
+                    OrchestratorBase.__log.info(f"Scan id {scan_submit['id']} created for {clone_url}:{commit_branch}@{commit_hash}")
 
         return 204
 

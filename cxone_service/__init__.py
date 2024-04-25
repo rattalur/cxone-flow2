@@ -31,6 +31,8 @@ class CxOneService:
     def __succeed_or_throw(response):
         if not response.ok:
             raise CxOneException(f"Method: {response.request.method} Url: {response.request.url} Status: {response.status_code}")
+        else:
+            return response
 
 
     async def execute_scan(self, zip_path, org_name, repo_name, commit_branch, repo_url, scan_tags={}):
@@ -64,6 +66,7 @@ class CxOneService:
         await Status.report(self.moniker, "upload-zip", perf_counter_ns() - check)
 
         check = perf_counter_ns()
+
         scan_response = CxOneService.__get_json_or_fail(await self.__client.execute_scan(\
             {
             "type" : "upload",
@@ -79,5 +82,7 @@ class CxOneService:
             "project" : {"id" : project_id}}))
         
         await Status.report(self.moniker, "submit-scan", perf_counter_ns() - check)
+
+        return scan_response
 
     
