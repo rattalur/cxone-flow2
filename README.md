@@ -42,12 +42,6 @@ orchestrate the scanning.
 
 Optional.  Contains the following elements:
 
-#### update-project-clone-creds
-
-Optional.  Default: False
-
-If True, each scan attempts to update the project with the credentials and clone URL needed to clone the repository.
-
 #### default-scan-engines
 
 Optional.  Default: Follows project scan configuration.
@@ -290,7 +284,6 @@ project-b-clone: &bbdc-project-b-clone
   token: token_secret
 
 scan-defaults: &scm-defaults
-  update-project-clone-creds: True
   default-scan-engines:
     - sast:
         incremental: False
