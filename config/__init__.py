@@ -247,7 +247,6 @@ class CxOneFlowConfig:
         scan_config_dict = CxOneFlowConfig.__get_value_for_key_or_default('scan-config', config_dict, {} )
 
         cxone_service = CxOneService(service_moniker, cxone_client, \
-                                     CxOneFlowConfig.__get_value_for_key_or_default('update-project-clone-creds', scan_config_dict, False), \
                                      CxOneFlowConfig.__get_value_for_key_or_default('default-scan-engines', scan_config_dict, None), \
                                      CxOneFlowConfig.__get_value_for_key_or_default('default-scan-tags', scan_config_dict, None), \
                                      CxOneFlowConfig.__get_value_for_key_or_default('default-project-tags', scan_config_dict, None), \
