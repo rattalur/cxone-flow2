@@ -3,8 +3,8 @@ from .scm import SCMService
 
 class BitBucketDataCenterService(SCMService):
 
-    def __init__(self, session, shared_secret, cloner):
-        SCMService.__init__(self, session, shared_secret, cloner)
+    def __init__(self, moniker, session, shared_secret, cloner):
+        SCMService.__init__(self, moniker, session, shared_secret, cloner)
 
     async def get_protected_branches(self, project, slug):
         retBranches = []

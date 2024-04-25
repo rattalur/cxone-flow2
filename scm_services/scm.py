@@ -12,10 +12,15 @@ class RetriesExhausted(Exception):
 class SCMService:
     __log = logging.getLogger(__name__)
 
-    def __init__(self, api_session, shared_secret, cloner):
+    def __init__(self, moniker, api_session, shared_secret, cloner):
         self.__session = api_session
         self.__shared_secret = shared_secret
         self.__cloner = cloner
+        self.__moniker = moniker
+
+    @property
+    def moniker(self):
+        return self.__moniker
 
     @property
     def cloner(self):

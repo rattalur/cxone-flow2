@@ -239,12 +239,14 @@ class CxOneFlowConfig:
     def __setup_scm(scm_service_factory, config_dict, config_path):
         repo_matcher = re.compile(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'repo-match', config_dict), re.IGNORECASE)
 
+        service_moniker = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'service-name', config_dict)
+
         cxone_client = CxOneFlowConfig.__cxone_client_factory(f"{config_path}/cxone", 
                                                             **(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'cxone', config_dict)))
 
         scan_config_dict = CxOneFlowConfig.__get_value_for_key_or_default('scan-config', config_dict, {} )
 
-        cxone_service = CxOneService(cxone_client, \
+        cxone_service = CxOneService(service_moniker, cxone_client, \
                                      CxOneFlowConfig.__get_value_for_key_or_default('update-project-clone-creds', scan_config_dict, False), \
                                      CxOneFlowConfig.__get_value_for_key_or_default('default-scan-engines', scan_config_dict, None), \
                                      CxOneFlowConfig.__get_value_for_key_or_default('default-scan-tags', scan_config_dict, None), \
@@ -275,7 +277,7 @@ class CxOneFlowConfig:
             clone_auth_dict = api_auth_dict
             clone_config_path = f"{config_path}/connection/api-auth"
                
-        scm_service = scm_service_factory(api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(clone_auth_dict, clone_config_path))
+        scm_service = scm_service_factory(service_moniker, api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(clone_auth_dict, clone_config_path))
       
         CxOneFlowConfig.__ordered_scm_config_tuples.append((repo_matcher, cxone_service, scm_service))
 

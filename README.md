@@ -27,6 +27,11 @@ the webhook.
 
 Each scm configuration has the following elements
 
+### service-name
+
+Required.  A moniker for the route match that is used for reporting status.
+
+
 ### repo-match
 
 Required. A regex applied to the source repository.  If the repo matches the regex, this configuration is used to
@@ -296,7 +301,8 @@ scan-defaults: &scm-defaults
     foo: bar
 
 bbdc:
-  - repo-match: .*/PA
+  - service-name: BBDC-ProjectA
+    repo-match: .*/PA
     scan-config:
       <<: *scm-defaults
     connection:
@@ -308,7 +314,8 @@ bbdc:
     cxone:
       <<: *cxone_prod_tenant
   
-  - repo-match: .*PB
+  - service-name: BBDC-ProjectB
+    repo-match: .*PB
     scan-config:
       <<: *scm-defaults
     connection:
