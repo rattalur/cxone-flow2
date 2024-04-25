@@ -144,7 +144,7 @@ class CxOneFlowConfig:
         if 'api-key' in kwargs.keys():
             return cx.CxOneClient.create_with_api_key(
                 CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(config_path, 'api-key', kwargs), \
-                __agent__, __version__, \
+                __agent__, \
                 tenant_auth_endpoint, \
                 tenant_api_endpoint, \
                 CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', kwargs, 60), \
@@ -159,7 +159,7 @@ class CxOneFlowConfig:
 
             return cx.CxOneClient.create_with_oauth(
                 oauth_id, oauth_secret, \
-                __agent__, __version__, \
+                __agent__, \
                 tenant_auth_endpoint, \
                 tenant_api_endpoint, \
                 CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', kwargs, 60), \

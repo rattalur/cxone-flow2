@@ -46,7 +46,12 @@ Optional.  Contains the following elements:
 
 Optional.  Default: Follows project scan configuration.
 
-This is a list of dictonaries following the configuration parameters for each engine specified in the [Checkmarx One Scan API](https://checkmarx.stoplight.io/docs/checkmarx-one-api-reference-guide/branches/main/f601dd9456e80-run-a-scan)
+This is a dictionary in the format of:
+
+`<engine name> : <engine configuration dictionary>`
+
+The configuration dictionary for each engine follows the engine configuration parameters specified in 
+the [Checkmarx One Scan API](https://checkmarx.stoplight.io/docs/checkmarx-one-api-reference-guide/branches/main/f601dd9456e80-run-a-scan)
 
 
 #### default-scan-tags
@@ -285,9 +290,12 @@ project-b-clone: &bbdc-project-b-clone
 
 scan-defaults: &scm-defaults
   default-scan-engines:
-    - sast:
-        incremental: False
-    - sca
+    sast:
+      incremental: "false"
+    sca:
+      exploitablePath: "true"
+    apisec:
+
   default-scan-tags:
     foo: bar
   default-project-tags:

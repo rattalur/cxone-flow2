@@ -1,6 +1,8 @@
 import zipfile, tempfile, logging
 from pathlib import Path, PurePath
-
+from time import perf_counter_ns
+from status import Status
+from _version import __version__
 
 class OrchestratorBase:
 
@@ -52,13 +54,18 @@ class OrchestratorBase:
 
         if commit_branch in protected_branches:
             clone_url = self._repo_clone_url(scm_service.cloner.clone_protocol)
+            check = perf_counter_ns()
             async with scm_service.cloner.clone(clone_url) as clone_worker:
                 code_path = await clone_worker.loc()
 
                 await scm_service.cloner.reset_head(code_path, commit_hash)
 
+                await Status.report(scm_service.moniker, "clone", perf_counter_ns() - check)
+
+                check = perf_counter_ns()
+
                 with tempfile.NamedTemporaryFile(suffix='.zip') as zip_file:
-                    with zipfile.ZipFile(zip_file, mode="w") as upload_payload:
+                    with zipfile.ZipFile(zip_file, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as upload_payload:
                         zip_entries = OrchestratorBase.__get_path_dict(code_path)
 
                         OrchestratorBase.__log.debug(f"[{clone_url}][{commit_branch}][{commit_hash}] zipping for scan: {zip_entries}")
@@ -66,8 +73,21 @@ class OrchestratorBase:
                         for entry_key in zip_entries.keys():
                             upload_payload.write(entry_key, zip_entries[entry_key])
                         
-                        # TODO: react to submit result
-                        scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, commit_branch, commit_hash)
+                    await Status.report(scm_service.moniker, "create-zip", perf_counter_ns() - check)
+
+                    check = perf_counter_ns()
+
+                    # TODO: react to submit result
+                    scan_tags = {
+                        "commit" : commit_hash,
+                        "workflow" : "push-protected-branch",
+                        "cxone-flow" : __version__
+                    }
+
+                    scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, \
+                                                                    commit_branch, clone_url, scan_tags)
+
+                    await Status.report(cxone_service.moniker, "scan-start", perf_counter_ns() - check)
 
         return 204
 
