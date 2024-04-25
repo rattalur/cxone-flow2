@@ -9,30 +9,34 @@ from flask import Flask, request, Response
 from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator
 import json, logging
 from config import CxOneFlowConfig
-
-
+from status import Status
+from time import perf_counter_ns
 
 __app_name__ = f"cxone-flow/{__version__}"
 
 __log = logging.getLogger(__app_name__)
 
+Status.bootstrap()
 CxOneFlowConfig.bootstrap()
 
 app = Flask(__app_name__)
 
 
-
-@app.get("/ping")
-def ping():
-    return Response("pong")
+@app.get("/status")
+async def node_status():
+    return Response(json.dumps(await Status.get()), status=200)
 
 @app.post("/bbdc")
 async def bbdc_webhook_endpoint():
+    counter = perf_counter_ns()
     __log.info("Received hook for BitBucket Data Center")
     __log.debug(f"bbdc webhook: headers: [{request.headers}] body: [{json.dumps(request.json)}]")
     try:
-        return Response(status=await OrchestrationDispatch.execute(BitBucketDataCenterOrchestrator(request.headers, request.data)))
+        resp = Response(status=await OrchestrationDispatch.execute(BitBucketDataCenterOrchestrator(request.headers, request.data)))
+        await Status.report("wsgi", "bbdc", perf_counter_ns() - counter)
+        return resp
     except Exception as ex:
+        await Status.report("wsgi-error", "bbdc", perf_counter_ns() - counter)
         __log.error(ex)
         return Response(status=400)
 

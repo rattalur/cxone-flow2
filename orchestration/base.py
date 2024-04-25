@@ -66,6 +66,7 @@ class OrchestratorBase:
                         for entry_key in zip_entries.keys():
                             upload_payload.write(entry_key, zip_entries[entry_key])
                         
+                        # TODO: react to submit result
                         scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, commit_branch, commit_hash)
 
         return 204
