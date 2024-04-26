@@ -1,4 +1,5 @@
 from _version import __version__
+from _agent import __agent__
 from requests import Session
 
 
@@ -6,9 +7,7 @@ class APISession(Session):
     def __init__(self, api_base_endpoint, auth, timeout=60, retries=3, proxies=None, ssl_verify=True):
         Session.__init__(self)
 
-        self.headers = {
-            "User-Agent" : f"cxone-flow/{__version__}"
-            }
+        self.headers = { "User-Agent" : __agent__ }
         
         self.__base_endpoint = api_base_endpoint
         self.__timeout = timeout
