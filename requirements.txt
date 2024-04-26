@@ -3,3 +3,6 @@ pytest
 pyyaml
 password-strength
 jsonpath-ng
+Gunicorn
+celery[librabbitmq]
+

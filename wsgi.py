@@ -40,5 +40,8 @@ async def bbdc_webhook_endpoint():
         __log.error(ex)
         return Response(status=400)
 
+  
 
+if __name__ == "__main__":
+    app.run()
 

@@ -1,6 +1,50 @@
-# Yep
+# CxOne Flow
 
-Nothing works just yet.
+If you are familiar with [CxFlow](https://github.com/checkmarx-ltd/cx-flow) for Checkmarx SAST,
+the role of CxOne Flow will be familiar.  If not, CxOne Flow is a scan and feedback orchestrator
+that executes code analysis scans and reports issues in an issue tracker or as pull-request
+decorations.
+
+## CxOneFlow vs CxFlow
+
+CxOneFlow is not intended to ever reach feature parity with CxFlow.  Many CxFlow features will not apply
+to Checkmarx One scanning.  CxOneFlow currently only orchestrates scans via webhook events for push and
+pull-requests involving protected branches.
+
+# Quickstart and Documentation
+
+Please refer to the [Releases](https://github.com/checkmarx-ts/cxone-flow/releases) where you will find
+a PDF manual.
+
+
+# Developing
+
+The development is performed on Ubuntu using Visual Studio Code.  This is not 
+strictly required but any instructions for quick starting the development environment 
+will be for using Ubuntu and VSCode. If you have different development tooling you'd like
+to use, you'll need to adapt these instructions to fit your tooling.
+
+## LaTeX
+
+The documentation is written in LaTeX, so enabling VSCode to lint, compile, and preview
+LaTeX requires some configuration.
+
+### Setup
+
+1. In VSCode, install the "LaTeX Workshop" plugin by James Yu
+
+2. Install TexLive direct from the website.  This is required since
+most Debian package repositories have an older version of TexLive.
+
+Download: https://www.tug.org/texlive/acquire-netinstall.html
+
+Install: https://www.tug.org/texlive/quickinstall.html
+
+At the end of the install, it will instruct you to update `PATH`, `MANPATH`, and `INFOPATH`.
+Set these in `~/.bashrc`, close your shell and re-open it to get the new environment variables.
+
+3. Execute `sudo $(which texconfig) rehash`
+
 
 
 # Configuration
