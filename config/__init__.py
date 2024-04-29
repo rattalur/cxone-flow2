@@ -45,7 +45,7 @@ class CxOneFlowConfig:
 
 
     @staticmethod
-    async def retrieve_services_by_route(clone_urls):
+    def retrieve_services_by_route(clone_urls):
 
         if type(clone_urls) is list:
             it_list = clone_urls

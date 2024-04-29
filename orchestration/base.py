@@ -51,9 +51,9 @@ class OrchestratorBase:
     async def _execute_push_scan_workflow(self, cxone_service, scm_service):
         protected_branches = await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
         commit_branch, commit_hash = await self._get_target_branch_and_hash()
+        clone_url = self._repo_clone_url(scm_service.cloner.clone_protocol)
 
         if commit_branch in protected_branches:
-            clone_url = self._repo_clone_url(scm_service.cloner.clone_protocol)
             check = perf_counter_ns()
             async with scm_service.cloner.clone(clone_url) as clone_worker:
                 code_path = await clone_worker.loc()
@@ -90,8 +90,8 @@ class OrchestratorBase:
 
                     OrchestratorBase.__log.debug(scan_submit)
                     OrchestratorBase.__log.info(f"Scan id {scan_submit['id']} created for {clone_url}:{commit_branch}@{commit_hash}")
-
-        return 204
+        else:
+            OrchestratorBase.__log.info(f"{clone_url}:{commit_hash}:{commit_branch} is not in the protected branch list: {protected_branches}")
 
     async def _execute_pr_scan_workflow(self, cxone_service, scm_service):
         pass

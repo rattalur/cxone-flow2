@@ -14,7 +14,7 @@ class OrchestrationDispatch:
             return 200
 
         OrchestrationDispatch.__log.debug(f"Service lookup: {orchestrator.route_urls}")
-        cxone_service, scm_service = await CxOneFlowConfig.retrieve_services_by_route(orchestrator.route_urls)
+        cxone_service, scm_service = CxOneFlowConfig.retrieve_services_by_route(orchestrator.route_urls)
         OrchestrationDispatch.__log.debug(f"Service lookup success: {orchestrator.route_urls}")
 
         if await orchestrator.is_signature_valid(scm_service.shared_secret):
@@ -22,7 +22,6 @@ class OrchestrationDispatch:
         else:
             OrchestrationDispatch.__log.warn(f"Payload signature validation failed, webhook payload ignored.")
 
-        return 204
 
 
 

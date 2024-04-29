@@ -7,10 +7,13 @@ that is compatible with other methods of deployment.
 from _version import __version__
 from flask import Flask, request, Response
 from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator
-import json, logging
+import json, logging, asyncio
 from config import CxOneFlowConfig
 from status import Status
 from time import perf_counter_ns
+from task_management import TaskManager
+
+from gunicorn.workers.sync import SyncWorker
 
 __app_name__ = f"cxone-flow/{__version__}"
 
@@ -18,13 +21,20 @@ __log = logging.getLogger(__app_name__)
 
 Status.bootstrap()
 CxOneFlowConfig.bootstrap()
+TaskManager.bootstrap()
+
 
 app = Flask(__app_name__)
 
+@app.get("/ping")
+async def ping():
+    return Response("pong", status=200)
 
-@app.get("/status")
-async def node_status():
-    return Response(json.dumps(await Status.get()), status=200)
+# Need an IPC mechanism for this, will revisit this later
+# @app.get("/status")
+# async def node_status():
+#     return Response(json.dumps(await Status.get()), status=200)
+
 
 @app.post("/bbdc")
 async def bbdc_webhook_endpoint():
@@ -32,16 +42,10 @@ async def bbdc_webhook_endpoint():
     __log.info("Received hook for BitBucket Data Center")
     __log.debug(f"bbdc webhook: headers: [{request.headers}] body: [{json.dumps(request.json)}]")
     try:
-        resp = Response(status=await OrchestrationDispatch.execute(BitBucketDataCenterOrchestrator(request.headers, request.data)))
-        await Status.report("wsgi", "bbdc", perf_counter_ns() - counter)
-        return resp
+        TaskManager.in_background(OrchestrationDispatch.execute(BitBucketDataCenterOrchestrator(request.headers, request.data)))
+        return Response(status=204)
     except Exception as ex:
-        await Status.report("wsgi-error", "bbdc", perf_counter_ns() - counter)
         __log.error(ex)
         return Response(status=400)
 
   
-
-if __name__ == "__main__":
-    app.run()
-
