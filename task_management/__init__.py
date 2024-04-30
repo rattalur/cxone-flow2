@@ -3,13 +3,15 @@ from threading import Thread, Lock
 
 
 class TaskManager:
-    __log = logging.getLogger("TaskManager")
-
     __monitor_lock = Lock()
     __monitored = []
     __bgloop = None
     __thread = None
 
+    @staticmethod
+    def log():
+        return logging.getLogger("TaskManager")
+    
     @staticmethod
     def __thread_proc():
         asyncio.set_event_loop(TaskManager.__bgloop)
@@ -32,6 +34,7 @@ class TaskManager:
 
     @staticmethod
     def __callback(future):
+        TaskManager.log().debug(f"Callback for finished future {future}")
         with TaskManager.__monitor_lock:
             TaskManager.__log_future_result(future)
             TaskManager.__monitored.remove(future)
@@ -39,9 +42,9 @@ class TaskManager:
     @staticmethod
     def __log_future_result(future):
         if future.exception() is not None:
-            TaskManager.__log.error(future.exception())
+            TaskManager.log().exception(future.exception())
         else:
-            TaskManager.__log.debug(future.result())
+            TaskManager.log().debug(future.result())
 
 
     @staticmethod
@@ -53,10 +56,10 @@ class TaskManager:
 
     @staticmethod
     def wait_for_exit():
-        TaskManager.__log.info("Gracefully shutting down...")
+        TaskManager.log().info("Gracefully shutting down...")
         while True:
             with TaskManager.__monitor_lock:
-                TaskManager.__log.debug(f"TaskManager.__monitored: {len(TaskManager.__monitored)}")
+                TaskManager.log().debug(f"TaskManager.__monitored: {len(TaskManager.__monitored)}")
                 
                 if len(TaskManager.__monitored) == 0:
                     break

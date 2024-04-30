@@ -3,19 +3,23 @@ import os, tempfile, shutil, shlex, subprocess, asyncio, logging, urllib, base64
 
 class Cloner:
 
-    __log = logging.getLogger("Cloner")
-
     def __init__(self):
         self.__env = dict(os.environ)
 
     @staticmethod
+    def log():
+        return logging.getLogger("Cloner")
+
+    @staticmethod
     def __insert_creds_in_url(url, username, password):
         split = urllib.parse.urlsplit(url)
-        new_netloc = f"{urllib.parse.quote(username) if username is not None else 'git'}:{urllib.parse.quote(password)}@{split.netloc}"
+        new_netloc = f"{urllib.parse.quote(username, safe='') if username is not None else 'git'}:{urllib.parse.quote(password, safe='')}@{split.netloc}"
         return urllib.parse.urlunsplit((split.scheme, new_netloc, split.path, split.query, split.fragment))
         
     @staticmethod
     def using_basic_auth(username, password):
+        Cloner.log().debug("Clone with using_basic_auth")
+
         retval = Cloner()
         retval.__protocol = "https"
         retval.__username = username
@@ -30,6 +34,8 @@ class Cloner:
 
     @staticmethod
     def using_token_auth(token, username=None):
+        Cloner.log().debug("Clone with using_token_auth")
+
         retval = Cloner()
         retval.__protocol = "https"
 
@@ -41,6 +47,8 @@ class Cloner:
 
     @staticmethod
     def using_ssh_auth(ssh_private_key_file):
+        Cloner.log().debug("Clone with using_ssh_auth")
+
         retval = Cloner()
         retval.__protocol = "ssh"
         with open(ssh_private_key_file, "rt") as source:
@@ -60,7 +68,7 @@ class Cloner:
         return self.__protocol
 
     def clone(self, clone_url):
-        Cloner.__log.debug(f"Cloning: {clone_url}")
+        Cloner.log().debug(f"Clone Execution for: {clone_url}")
 
         fixed_clone_url = self.__fix_clone_url(clone_url)
 
@@ -75,10 +83,10 @@ class Cloner:
             result = await (asyncio.to_thread(subprocess.run, ["git", "reset", "--hard", hash], \
                                 capture_output=True, env=self.__env, check=True, cwd=code_path))
             
-            self.__log.debug(f"Reset task: return code [{result.returncode}] stdout: [{result.stdout}] stderr: [{result.stderr}]")
+            self.log().debug(f"Reset task: return code [{result.returncode}] stdout: [{result.stdout}] stderr: [{result.stderr}]")
 
         except subprocess.CalledProcessError as ex:
-            self.__log.error(f"{ex} stdout: [{ex.stdout.decode('UTF-8')}] stderr: [{ex.stderr.decode('UTF-8')})]")
+            self.log().error(f"{ex} stdout: [{ex.stdout.decode('UTF-8')}] stderr: [{ex.stderr.decode('UTF-8')})]")
             raise
 
     class __clone_worker:
@@ -99,9 +107,11 @@ class Cloner:
                 raise
 
         async def __aenter__(self):
+            self.__log.debug("__aenter__")
             return self
 
         async def __aexit__(self, exc_type, exc, tb):
+            self.__log.debug("__aexit__")
             self.__clone_out_tempdir.cleanup()
 
 

@@ -5,7 +5,10 @@ from config import CxOneFlowConfig
 
 class OrchestrationDispatch:
 
-    __log = logging.getLogger("OrchestrationDispatch")
+    @staticmethod
+    def log():
+        return logging.getLogger("OrchestrationDispatch")
+
 
     @staticmethod
     async def execute(orchestrator):
@@ -13,14 +16,14 @@ class OrchestrationDispatch:
         if orchestrator.is_diagnostic:
             return 200
 
-        OrchestrationDispatch.__log.debug(f"Service lookup: {orchestrator.route_urls}")
+        OrchestrationDispatch.log().debug(f"Service lookup: {orchestrator.route_urls}")
         cxone_service, scm_service = CxOneFlowConfig.retrieve_services_by_route(orchestrator.route_urls)
-        OrchestrationDispatch.__log.debug(f"Service lookup success: {orchestrator.route_urls}")
+        OrchestrationDispatch.log().debug(f"Service lookup success: {orchestrator.route_urls}")
 
         if await orchestrator.is_signature_valid(scm_service.shared_secret):
             return await orchestrator.execute(cxone_service, scm_service)
         else:
-            OrchestrationDispatch.__log.warn(f"Payload signature validation failed, webhook payload ignored.")
+            OrchestrationDispatch.log().warn(f"Payload signature validation failed, webhook payload ignored.")
 
 
 

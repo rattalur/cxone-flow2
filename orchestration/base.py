@@ -6,7 +6,10 @@ from _version import __version__
 
 class OrchestratorBase:
 
-    __log = logging.getLogger("OrchestratorBase")
+
+    @staticmethod
+    def log():
+        return logging.getLogger("OrchestratorBase")
 
     def __init__(self, headers, webhook_payload):
         self.__webhook_payload = webhook_payload
@@ -49,12 +52,17 @@ class OrchestratorBase:
         raise NotImplementedError("execute")
     
     async def _execute_push_scan_workflow(self, cxone_service, scm_service):
+        OrchestratorBase.log().debug("_execute_push_scan_workflow")
+
         protected_branches = await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
         commit_branch, commit_hash = await self._get_target_branch_and_hash()
         clone_url = self._repo_clone_url(scm_service.cloner.clone_protocol)
 
         if commit_branch in protected_branches:
             check = perf_counter_ns()
+            
+            OrchestratorBase.log().debug("Starting clone...")
+
             async with scm_service.cloner.clone(clone_url) as clone_worker:
                 code_path = await clone_worker.loc()
 
@@ -68,7 +76,7 @@ class OrchestratorBase:
                     with zipfile.ZipFile(zip_file, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as upload_payload:
                         zip_entries = OrchestratorBase.__get_path_dict(code_path)
 
-                        OrchestratorBase.__log.debug(f"[{clone_url}][{commit_branch}][{commit_hash}] zipping for scan: {zip_entries}")
+                        OrchestratorBase.log().debug(f"[{clone_url}][{commit_branch}][{commit_hash}] zipping for scan: {zip_entries}")
 
                         for entry_key in zip_entries.keys():
                             upload_payload.write(entry_key, zip_entries[entry_key])
@@ -83,15 +91,20 @@ class OrchestratorBase:
                         "cxone-flow" : __version__
                     }
 
-                    scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, \
-                                                                    commit_branch, clone_url, scan_tags)
+                    try:
+                        scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, \
+                                                                        commit_branch, clone_url, scan_tags)
 
-                    await Status.report(cxone_service.moniker, "scan-start", perf_counter_ns() - check)
+                        await Status.report(cxone_service.moniker, "scan-start", perf_counter_ns() - check)
 
-                    OrchestratorBase.__log.debug(scan_submit)
-                    OrchestratorBase.__log.info(f"Scan id {scan_submit['id']} created for {clone_url}:{commit_branch}@{commit_hash}")
+                        OrchestratorBase.log().debug(scan_submit)
+                        OrchestratorBase.log().info(f"Scan id {scan_submit['id']} created for {clone_url}:{commit_branch}@{commit_hash}")
+                    except Exception as ex:
+                        OrchestratorBase.log().error(f"{clone_url}:{commit_branch}@{commit_hash}: No scan created due to exception: {ex}")
+                        OrchestratorBase.log().exception(ex)
+
         else:
-            OrchestratorBase.__log.info(f"{clone_url}:{commit_hash}:{commit_branch} is not in the protected branch list: {protected_branches}")
+            OrchestratorBase.log().info(f"{clone_url}:{commit_hash}:{commit_branch} is not in the protected branch list: {protected_branches}")
 
     async def _execute_pr_scan_workflow(self, cxone_service, scm_service):
         pass

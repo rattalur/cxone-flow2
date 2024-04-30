@@ -49,7 +49,7 @@ async def bbdc_webhook_endpoint():
         TaskManager.in_background(OrchestrationDispatch.execute(BitBucketDataCenterOrchestrator(request.headers, request.data)))
         return Response(status=204)
     except Exception as ex:
-        __log.error(ex)
+        __log.exception(ex)
         return Response(status=400)
 
   
