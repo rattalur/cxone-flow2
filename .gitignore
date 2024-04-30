@@ -1,6 +1,7 @@
 # yaml files in root
 *.yaml
 *.yml
+*.log
 
 # secrets
 **/secrets
