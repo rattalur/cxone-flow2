@@ -4,9 +4,6 @@ import logging, logging.config, json, os
 def get_log_level():
     return "INFO" if os.getenv('LOG_LEVEL') is None else os.getenv('LOG_LEVEL')
 
-def get_log_config_filename():
-    return os.getenv('CXONEFLOW_LOG_CONFIG_FILE')
-
 
 def load_logging_config_dict(filename):
     with open(filename, "rt") as cfg:
@@ -14,8 +11,7 @@ def load_logging_config_dict(filename):
         config['loggers']['root']['level'] = get_log_level()
         return config
     
-def bootstrap(filename=get_log_config_filename()):
-    if filename is None:
+def bootstrap():
         logging.config.dictConfig({
             "version": 1,
             "handlers": {
@@ -23,7 +19,15 @@ def bootstrap(filename=get_log_config_filename()):
                     "class": "logging.StreamHandler",
                     "formatter": "default",
                     "stream": "ext://sys.stdout"
+                },
+                "file": {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "formatter": "default",
+                    "filename": f"/var/log/cxoneflow/cxoneflow.{os.getpid()}.log",
+                    "backupCount" : 10,
+                    "maxBytes" : 1024000000
                 }
+
             },
             "formatters": {
                 "default": {
@@ -33,10 +37,8 @@ def bootstrap(filename=get_log_config_filename()):
             },
             "loggers": {
                 "root": {
-                    "handlers": ["console"],
+                    "handlers": ["console", "file"],
                     "level": "DEBUG"
                 }
             }
         })
-    else:
-        logging.config.dictConfig(load_logging_config_dict(filename))

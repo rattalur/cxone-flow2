@@ -32,8 +32,6 @@ RUN usermod -s /bin/bash nobody && \
     chmod 775 /var/log/cxoneflow
 
 
-ENV CXONEFLOW_LOG_CONFIG_FILE=/opt/cxone/logging.json
-
 COPY *.py /opt/cxone/
 COPY docker/entrypoint.sh /opt/cxone
 COPY docker/*.py /opt/cxone
