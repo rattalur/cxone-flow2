@@ -54,10 +54,14 @@ Environment Variables:
 
 `LOG_LEVEL`: Default: INFO
 
-Set to `DEBUG` for increased logging.
+Set to `DEBUG` for increased logging verbosity.
 
 `CONFIG_YAML_PATH` Default: /opt/cxone/config.yaml
 
+`HOSTNAME` Default: localhost
+
+`SSL_CERT_PATH` Optional.  Set to the path of the SSL certificate.
+`SSL_CERT_KEY` Optional.  Set to the path of the unencrypted private key for the SSL certificate.
 
 
 # Operational Configuration
