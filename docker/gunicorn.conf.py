@@ -10,7 +10,6 @@ else:
 timeout = 90
 graceful_timeout=600
 
-daemon = True
 max_requests = 500
 
 accesslog = "/var/log/gunicorn/access.log"

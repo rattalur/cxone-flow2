@@ -18,7 +18,7 @@ class Cloner:
         
     @staticmethod
     def using_basic_auth(username, password):
-        Cloner.log().debug("Clone with using_basic_auth")
+        Cloner.log().debug("Clone config: using_basic_auth")
 
         retval = Cloner()
         retval.__protocol = "https"
@@ -34,7 +34,7 @@ class Cloner:
 
     @staticmethod
     def using_token_auth(token, username=None):
-        Cloner.log().debug("Clone with using_token_auth")
+        Cloner.log().debug("Clone config: using_token_auth")
 
         retval = Cloner()
         retval.__protocol = "https"
@@ -47,7 +47,7 @@ class Cloner:
 
     @staticmethod
     def using_ssh_auth(ssh_private_key_file):
-        Cloner.log().debug("Clone with using_ssh_auth")
+        Cloner.log().debug("Clone config: using_ssh_auth")
 
         retval = Cloner()
         retval.__protocol = "ssh"
@@ -92,7 +92,7 @@ class Cloner:
     class __clone_worker:
 
         def __init__(self, clone_thread, clone_dest_path):
-            self.__log = logging.getLogger(f"__clone_worker:{clone_thread}")
+            self.__log = logging.getLogger(f"__clone_worker:{clone_dest_path}")
             self.__clone_out_tempdir = clone_dest_path
             self.__clone_thread = clone_thread
 
@@ -107,11 +107,10 @@ class Cloner:
                 raise
 
         async def __aenter__(self):
-            self.__log.debug("__aenter__")
             return self
 
         async def __aexit__(self, exc_type, exc, tb):
-            self.__log.debug("__aexit__")
+            self.__log.debug(f"Cleanup: {self.__clone_out_tempdir}")
             self.__clone_out_tempdir.cleanup()
 
 

@@ -34,7 +34,7 @@ class TaskManager:
 
     @staticmethod
     def __callback(future):
-        TaskManager.log().debug(f"Callback for finished future {future}")
+        TaskManager.log().debug(f"Callback for finished future {future}.")
         with TaskManager.__monitor_lock:
             TaskManager.__log_future_result(future)
             TaskManager.__monitored.remove(future)
@@ -44,7 +44,8 @@ class TaskManager:
         if future.exception() is not None:
             TaskManager.log().exception(future.exception())
         else:
-            TaskManager.log().debug(future.result())
+            if future.result() is not None:
+                TaskManager.log().debug(future.result())
 
 
     @staticmethod

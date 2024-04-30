@@ -14,7 +14,7 @@ class OrchestrationDispatch:
     async def execute(orchestrator):
 
         if orchestrator.is_diagnostic:
-            return 200
+            return 204
 
         OrchestrationDispatch.log().debug(f"Service lookup: {orchestrator.route_urls}")
         cxone_service, scm_service = CxOneFlowConfig.retrieve_services_by_route(orchestrator.route_urls)

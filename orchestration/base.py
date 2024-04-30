@@ -1,7 +1,6 @@
 import zipfile, tempfile, logging
 from pathlib import Path, PurePath
 from time import perf_counter_ns
-from status import Status
 from _version import __version__
 
 class OrchestratorBase:
@@ -68,8 +67,7 @@ class OrchestratorBase:
 
                 await scm_service.cloner.reset_head(code_path, commit_hash)
 
-                await Status.report(scm_service.moniker, "clone", perf_counter_ns() - check)
-
+                OrchestratorBase.log().info(f"{clone_url} clones in {perf_counter_ns() - check}ns")
                 check = perf_counter_ns()
 
                 with tempfile.NamedTemporaryFile(suffix='.zip') as zip_file:
@@ -81,10 +79,8 @@ class OrchestratorBase:
                         for entry_key in zip_entries.keys():
                             upload_payload.write(entry_key, zip_entries[entry_key])
                         
-                    await Status.report(scm_service.moniker, "create-zip", perf_counter_ns() - check)
-
-                    check = perf_counter_ns()
-
+                        OrchestratorBase.log().info(f"{clone_url} zipped in {perf_counter_ns() - check}ns")
+                        
                     scan_tags = {
                         "commit" : commit_hash,
                         "workflow" : "push-protected-branch",
@@ -94,8 +90,6 @@ class OrchestratorBase:
                     try:
                         scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, \
                                                                         commit_branch, clone_url, scan_tags)
-
-                        await Status.report(cxone_service.moniker, "scan-start", perf_counter_ns() - check)
 
                         OrchestratorBase.log().debug(scan_submit)
                         OrchestratorBase.log().info(f"Scan id {scan_submit['id']} created for {clone_url}:{commit_branch}@{commit_hash}")

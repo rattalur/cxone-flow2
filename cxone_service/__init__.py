@@ -1,7 +1,6 @@
 import requests, asyncio
 from _agent import __agent__
 from _version import __version__
-from status import Status
 from time import perf_counter_ns
 
 class CxOneException(Exception):
@@ -39,8 +38,6 @@ class CxOneService:
 
         project_name = f"{org_name}/{repo_name}"
 
-        check = perf_counter_ns()
-
         projects_response = CxOneService.__get_json_or_fail (await self.__client.get_projects(name=project_name))
 
         if int(projects_response['filteredTotalCount']) == 0:
@@ -57,15 +54,10 @@ class CxOneService:
                 project_json['tags'] = new_tags | project_json['tags']
                 CxOneService.__succeed_or_throw(await self.__client.update_project(project_id, project_json))
 
-        await Status.report(self.moniker, "load-project", perf_counter_ns() - check)
 
 
 
-        check = perf_counter_ns()
         upload_url = await self.__client.upload_zip(zip_path)
-        await Status.report(self.moniker, "upload-zip", perf_counter_ns() - check)
-
-        check = perf_counter_ns()
 
         scan_response = CxOneService.__get_json_or_fail(await self.__client.execute_scan(\
             {
@@ -80,9 +72,7 @@ class CxOneService:
             [{"type" : engine, "value" : self.__default_engines[engine] if self.__default_engines[engine] is not None else {} } \
              for engine in self.__default_engines.keys()], \
             "project" : {"id" : project_id}}))
-        
-        await Status.report(self.moniker, "submit-scan", perf_counter_ns() - check)
-
+    
         return scan_response
 
     

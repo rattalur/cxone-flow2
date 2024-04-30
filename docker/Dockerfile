@@ -11,7 +11,7 @@ COPY *.txt /opt/cxone
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata && \
-    apt-get install -y python3.12 python3-pip nginx bash && \
+    apt-get install -y python3.12 python3-pip nginx git bash && \
     pip install -r requirements.txt --no-cache-dir --break-system-packages && \
     apt-get autoremove -y && \
     apt-get clean && \
@@ -35,7 +35,6 @@ RUN usermod -s /bin/bash nobody && \
 COPY *.py /opt/cxone/
 COPY docker/entrypoint.sh /opt/cxone
 COPY docker/*.py /opt/cxone
-COPY docker/logging.json /opt/cxone
 COPY docker/nginx /etc/nginx/sites-enabled/
 
 COPY api_utils /opt/cxone/api_utils
@@ -45,7 +44,6 @@ COPY cxone_service /opt/cxone/cxone_service
 COPY cxoneflow_logging /opt/cxone/cxoneflow_logging
 COPY orchestration /opt/cxone/orchestration
 COPY scm_services /opt/cxone/scm_services
-COPY status /opt/cxone/status
 COPY task_management /opt/cxone/task_management
 
 RUN chown root:nobody /etc/nginx/sites-enabled/*
