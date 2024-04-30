@@ -5,7 +5,7 @@ A docker image of [Bitbucket Data Cener](https://hub.docker.com/r/atlassian/bitb
 
 docker volume create --name bb
 
-docker run --rm -it -v bb:/var/atlassian/application-data/bitbucket --name="bbdc" -p 7990:7990 -p 7999:7999 atlassian/bitbucket
+docker run --rm -it -v bb:/var/atlassian/application-data/bitbucket --name="bbdc" -p 80:7990 -p 7999:7999 atlassian/bitbucket:latest
 
 It is suggested you create an entry in `hosts` to resolve a realistic domain name to `127.0.0.1` for the Bitbucket Server.  This
 will make it easier to simulate a real SCM instance.
