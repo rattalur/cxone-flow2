@@ -46,23 +46,6 @@ Set these in `~/.bashrc`, close your shell and re-open it to get the new environ
 3. Execute `sudo $(which texconfig) rehash`
 
 
-# Runtime Configuration
-
-Environment Variables:
-
-`CXONEFLOW_WORKERS`: Default: (# of CPUs / 2)  Max: (# of CPUs - 1)
-
-`LOG_LEVEL`: Default: INFO
-
-Set to `DEBUG` for increased logging verbosity.
-
-`CONFIG_YAML_PATH` Default: /opt/cxone/config.yaml
-
-`CXONEFLOW_HOSTNAME` Default: localhost
-
-`SSL_CERT_PATH` Optional.  Set to the path of the SSL certificate.
-`SSL_CERT_KEY_PATH` Optional.  Set to the path of the unencrypted private key for the SSL certificate.
-
 
 # Operational Configuration
 
@@ -89,22 +72,22 @@ the webhook.
 Each scm configuration has the following elements
 
 ### service-name
-
+X
 Required.  A moniker for the route match that is used for reporting status.
 
 
 ### repo-match
-
+X
 Required. A regex applied to the source repository.  If the repo matches the regex, this configuration is used to
 orchestrate the scanning.
 
 
 ### scan-config
-
+X
 Optional.  Contains the following elements:
 
 #### default-scan-engines
-
+X
 Optional.  Default: Follows project scan configuration.
 
 This is a dictionary in the format of:
@@ -116,28 +99,29 @@ the [Checkmarx One Scan API](https://checkmarx.stoplight.io/docs/checkmarx-one-a
 
 
 #### default-scan-tags
-
+X
 Optional.
 
 A dictionary of static key:value pairs that are assigned to each scan.
 
 #### default-project-tags
-
+X
 Optional.
 
 A dictionary of static key:value pairs that are assigned to each project upon project creation.
 
 
 ### connection
+X
 
 Required.  Contains values for connection parameters:
 
 #### base-url
-
+X
 Required.  The base url of the SCM server.
 
 #### shared-secret
-
+X
 Required.  The shared secret configured in the SCM used to sign webhook payloads.
 
 Complexity requirements will be checked.  The shared secret must meet the following minimum criteria:
@@ -149,29 +133,31 @@ Complexity requirements will be checked.  The shared secret must meet the follow
 
 
 #### timeout-seconds
-
+X
 Optional.  Default: 60
 
 The number of seconds before a request times out.
 
 #### retries
-
+X
 Optional.  Default: 3
 
 The number of retries when the request fails for some reason other than authorization errors.
 
 #### ssl-verify
-
+X
 Optional.  Default: True
 
 If False, server SSL certificates are not validated.
 
 #### proxies
+X
 Optional. Default: None
 
 A dictionary of <scheme>:<url> pairs to use a proxy server for requests.
 
 #### api-auth
+X
 Required.  A dictionary of SCM authorization options.
 
 Only one of the following keys can be defined:
@@ -186,6 +172,7 @@ Two distinct key/value pairs each specifying a file name found under the path de
 
 
 #### clone-auth
+X
 Optional.  Default: The options specified by api-auth.
 
 ##### token
@@ -208,6 +195,7 @@ should contain an unencrypted private key.
 
 
 ### cxone
+X
 
 Required.  The Checkmarx One tenant connection configuration.  The following additional values
 are to be configured under this key:

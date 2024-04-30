@@ -1,1 +1,190 @@
 \chapter{Configuration}
+
+
+\section{Runtime Configuration}
+
+\subsection{SSL}
+
+\subsubsection{Trusting Self-Signed Certificates}\label{sec:self-signed-certs}
+
+While the CheckmarxOne system uses TLS certificates signed by a public CA, it is possible that
+corporate proxies use certificates signed by a private CA. If so, it is possible to
+import custom CA certificates when using \cxoneflow.
+
+\noindent\\The custom certificates must meet the following criteria:
+
+\begin{itemize}
+    \item Must be in the PEM format.
+    \item Must be in a file ending with the extension .crt.
+    \item Only one certificate is in the file.
+    \item Must be mapped to the container path /usr/local/share/ca-certificates.
+\end{itemize}
+
+
+\noindent\\As an example, if using Docker, it is possible to map a local file to a file in the container with this mapping option added to the container execution command line:
+
+\begin{code}{Custom CA Mapping Option}{[Docker]}{}
+    -v $(pwd)/custom-ca.pem:/usr/local/share/ca-certificates/custom-ca.crt
+\end{code}
+
+\subsubsection{Configuring SSL for the \cxoneflow Endpoint}
+
+To make the \cxoneflow endpoint use SSL for communication, obtain an SSL certificate public/private key pair
+and then set the following environment variables in the runtime environment:
+
+\begin{table}[h]
+    \caption{SSL Environment Variables}        
+    \begin{tabularx}{\textwidth}{ll}
+        \toprule
+        \textbf{Variable} & \textbf{Description}\\
+        \midrule
+        \texttt{SSL\_CERT\_PATH} & \makecell[l]{The path to the server's SSL certificate in PEM format.}\\
+        \midrule
+        \texttt{SSL\_CERT\_KEY\_PATH} & \makecell[l]{The path to the certificate's unencrypted private key.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\noindent\\If your SSL certificate is self-signed or signed with a non-public CA, you'll want
+to import the custom CA as described in Section \ref{sec:self-signed-certs}.
+
+
+\subsection{Rutime Control Environment Variables}
+
+\begin{table}[h]
+    \caption{Runtime Control Environment Variables}        
+    \begin{tabularx}{\textwidth}{lccl}
+        \toprule
+        \textbf{Variable} & \textbf{Required} & \textbf{Default} & \textbf{Description}\\
+        \midrule
+        \texttt{CXONEFLOW\_WORKERS} & No & \texttt{(\# of CPUs / 2)} & \makecell[l]{The number of worker processes\\used for parallel execution. The\\maximum value will be\\set at \texttt{(\# of CPUs - 1)}}\\
+        \midrule
+        \texttt{LOG\_LEVEL} & No & \texttt{INFO} & \makecell[l]{The logging verbosity level.  Set to\\\texttt{DEBUG} for increased logging\\verbosity.}\\
+        \midrule
+        \texttt{CONFIG\_YAML\_PATH} & No & \texttt{/opt/cxone/config.yaml} & \makecell[l]{The path to the configuration\\YAML file.}\\
+        \midrule
+        \texttt{CXONEFLOW\_HOSTNAME} & No & \texttt{localhost} & \makecell[l]{The virtual hostname of the\\\cxoneflow endpoint.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+
+\section{Operational Configuration}
+
+The operational configuration is done using a YAML file mapped at \texttt{/opt/cxone/config.yaml}
+by default.  
+
+\subsection{YAML Configuration}
+
+\subsubsection{YAML Root}\label{sec:yaml-root}
+
+The root of the YAML configuration will contain the \texttt{secret-root-path} element
+and one or more unique SCM configuration monikers.  The following SCM configuration monikers
+are currently supported:
+
+\begin{itemize}
+    \item \texttt{bbdc} for BitBucket Data Center hook payloads targetting the \texttt{/bbdc}
+    webhook payload receiver endpoint.
+\end{itemize}
+
+
+\noindent\\The value for \texttt{secret-root-path} is the path to a directory that contains one
+or more files containing secret values.  The names to these files are referenced elsewhere
+in the YAML configuration file as described in
+\hyperref[sec:scm-block-structure]{YAML SCM Configuration Structure}.
+
+
+\subsubsection{YAML SCM Configuration Structure}\label{sec:scm-block-structure}
+
+The SCM configuration structure is the same for all SCM monikers. The structure is a list with
+one or more entries corresponding to a clone URL regular expression match.  The entry
+that first matches the clone URL received in the webhook payload is used to configure
+the workflow execution parameters.  Table \ref{tab:scm-section-keys} explains the SCM
+configuration keys for each SCM configuration list entry.
+
+\begin{table}[h]
+    \caption{SCM Configuration YAML Structure}  
+    \label{tab:scm-section-keys}      
+    \begin{tabularx}{\textwidth}{lcl}
+        \toprule
+        \textbf{Key} & \textbf{Required} & \textbf{Description}\\
+        \midrule
+        \texttt{service-name} & Yes & \makecell[l]{A moniker for the route match that is used for logging purposes.}\\
+        \midrule
+        \texttt{repo-match} & Yes & \makecell[l]{A regex applied to the source repository.  If the webhook payload has\\a clone URL that matches the regex, this configuration is used to\\orchestrate the scanning.}\\
+        \midrule
+        \texttt{scan-config} & No & \makecell[l]{Elements that define the default scan configuration.  The structure\\is described in the section\\"\hyperref[sec:scan-config-structure]{YAML Configuration Structure: \texttt{scan-config}}"}\\
+        \midrule
+        \texttt{connection} & Yes & \makecell[l]{SCM connection parameters. The structure\\is described in the section\\"\hyperref[sec:connection-structure]{YAML Configuration Structure: \texttt{connection}}"}\\
+        \midrule
+        \texttt{cxone} & Yes & \makecell[l]{The Checkmarx One tenant connection configuration.  TODO: describe in another section.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\paragraph{YAML Configuration Structure: \texttt{scan-config} }\label{sec:scan-config-structure}
+
+\noindent\\\\The \texttt{scan-config} structure, described in Table \ref{tab:scan-config-section-keys}, allows for default configurations to be applied to each scan.
+
+\begin{table}[h]
+    \caption{\texttt{scan-config} YAML Structure}  
+    \label{tab:scan-config-section-keys}      
+    \begin{tabularx}{\textwidth}{lcl}
+        \toprule
+        \textbf{Key} & \textbf{Required} & \textbf{Description}\\
+        \midrule
+        \texttt{default-scan-engines} & No & \makecell[l]{A structure that follows the format\\\texttt{<engine-name>:<engine config option dictionary>}\\corresponding to the configuration structure of the\\\href{https://checkmarx.stoplight.io/docs/checkmarx-one-api-reference-guide/branches/main/f601dd9456e80-run-a-scan}{Checkmarx One scan API}.}\\
+        \midrule
+        \texttt{default-scan-tags} & No &  \makecell[l]{A dictionary of static key:value pairs that are assigned to\\each scan.}\\
+        \midrule
+        \texttt{default-project-tags} & No & \makecell[l]{A dictionary of static key:value pairs that are assigned\\to each project upon project creation.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+\paragraph{YAML Configuration Structure: \texttt{connection} }\label{sec:connection-structure}
+
+\noindent\\\\The \texttt{connection} structure, described in Table \ref{tab:connection-section-keys}, 
+describes the SCM connection parameters used for API access and cloning.
+
+
+\begin{table}[h]
+    \caption{\texttt{connection} YAML Structure}  
+    \label{tab:connection-section-keys}      
+    \begin{tabularx}{\textwidth}{lccl}
+        \toprule
+        \textbf{Key} & \textbf{Required} & \textbf{Default} & \textbf{Description}\\
+        \midrule
+        \texttt{base-url} & Yes & N/A & \makecell[l]{The base url of the SCM server.}\\
+        \midrule
+        \texttt{shared-secret} & Yes & N/A & \makecell[l]{The shared secret configured in the SCM used to sign\\webhook payloads. The shared secret must meet the\\following minimum criteria: 20 characters long,\\contains at least 3 numbers, contains at least\\3 upper-case letters, and contains at least 2 special\\characters.}\\
+        \midrule
+        \texttt{timeout-seconds} & No & 60s & \makecell[l]{The number of seconds before a request for API\\results times out.}\\
+        \midrule
+        \texttt{retries} & No & 3 & \makecell[l]{The number of retries when the request fails.}\\
+        \midrule
+        \texttt{ssl-verify} & No & True & \makecell[l]{If False, server SSL certificates are not validated.}\\
+        \midrule
+        \texttt{proxies} & No & N/A & \makecell[l]{A dictionary of \texttt{<scheme>:<url>} pairs to use a proxy\\server for requests. See: \href{https://requests.readthedocs.io/en/latest/user/advanced/\#proxies}{Python "requests" proxies}.}\\
+        \midrule
+        \texttt{api-auth} & Yes & N/A & \makecell[l]{A dictionary of SCM authorization options for using the API. \\TODO: DEFINE THIS IN ANOTHER SECTION}\\
+        \midrule
+        \texttt{clone-auth} & No & \makecell[l]{\texttt{api-auth}} & \makecell[l]{Authorization options for performing clones when it\\differs from authorization for API requests. TODO: DEFINE IN ANOTHER SECTION}\\
+        \midrule
+        \texttt{} & No & \makecell[l]{}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+\subsection{Complete YAML Configuration Examples}
+
+\subsubsection{YAML without YAML Anchors}
+
+\subsubsection{YAML with YAML Anchors}
+
+For complex configurations, it is possible to use 
+\href{https://docs.docker.com/compose/compose-file/10-fragments/}{YAML Anchors}
+to avoid repeating some section definitions.
