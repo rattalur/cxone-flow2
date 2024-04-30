@@ -56,6 +56,9 @@ Environment Variables:
 
 Set to `DEBUG` for increased logging.
 
+`CONFIG_YAML_PATH` Default: /opt/cxone/config.yaml
+
+
 
 # Operational Configuration
 

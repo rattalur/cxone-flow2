@@ -3,9 +3,9 @@ from task_management import TaskManager
 import os
 
 if "CXONEFLOW_WORKERS" not in os.environ.keys():
-    workers = cpu_count() / 2
+    workers = int(cpu_count() / 2)
 else:
-    workers = min(cpu_count() - 1, int(os.environ['CXONEFLOW_WORKERS']))
+    workers = min(int(cpu_count() - 1), int(os.environ['CXONEFLOW_WORKERS']))
 
 timeout = 90
 graceful_timeout=600
