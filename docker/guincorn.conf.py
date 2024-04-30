@@ -13,8 +13,6 @@ graceful_timeout=600
 daemon = True
 max_requests = 500
 
-bind="127.0.0.1:5000"
-
 accesslog = "/var/log/gunicorn/access.log"
 errorlog = "/var/log/gunicorn/error.log"
 if "LOG_LEVEL" not in os.environ.keys():
