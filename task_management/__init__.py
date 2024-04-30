@@ -1,4 +1,4 @@
-import asyncio, logging
+import asyncio, logging, time
 from threading import Thread, Lock
 
 
@@ -52,11 +52,17 @@ class TaskManager:
             TaskManager.__monitored.append(ts)
 
     @staticmethod
-    async def wait_for_exit():
-        with TaskManager.__monitor_lock:
-            TaskManager.__log.info("Gracefully shutting down...")
-            done = await TaskManager.gather(TaskManager.__monitored, return_exceptions=True)
-            for f in done:
-                TaskManager.__log_future_result(f)
+    def wait_for_exit():
+        TaskManager.__log.info("Gracefully shutting down...")
+        while True:
+            with TaskManager.__monitor_lock:
+                TaskManager.__log.debug(f"TaskManager.__monitored: {len(TaskManager.__monitored)}")
+                
+                if len(TaskManager.__monitored) == 0:
+                    break
+            time.sleep(1.0)
+            
+
+
             
 

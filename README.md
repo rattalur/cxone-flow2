@@ -17,7 +17,7 @@ Please refer to the [Releases](https://github.com/checkmarx-ts/cxone-flow/releas
 a PDF manual.
 
 
-# Developing
+# For Developers
 
 The development is performed on Ubuntu using Visual Studio Code.  This is not 
 strictly required but any instructions for quick starting the development environment 
@@ -46,8 +46,18 @@ Set these in `~/.bashrc`, close your shell and re-open it to get the new environ
 3. Execute `sudo $(which texconfig) rehash`
 
 
+# Runtime Configuration
 
-# Configuration
+Environment Variables:
+
+`CXONEFLOW_WORKERS`: Default: (# of CPUs / 2)  Max: (# of CPUs - 1)
+
+`LOG_LEVEL`: Default: INFO
+
+Set to `DEBUG` for increased logging.
+
+
+# Operational Configuration
 
 Configuration is done via a yaml file.  
 

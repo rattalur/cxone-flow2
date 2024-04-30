@@ -4,7 +4,7 @@ orchestrator.  Code here should be limited to receive and delegating the logic t
 proper orchestrator.  This allows this to be replaced with a different type of endpoint handler
 that is compatible with other methods of deployment.
 """
-from _version import __version__
+from _agent import __agent__
 from flask import Flask, request, Response
 from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator
 import json, logging, asyncio
@@ -12,10 +12,13 @@ from config import CxOneFlowConfig
 from status import Status
 from time import perf_counter_ns
 from task_management import TaskManager
+import cxoneflow_logging as cof_logging
 
-from gunicorn.workers.sync import SyncWorker
+cof_logging.bootstrap()
 
-__app_name__ = f"cxone-flow/{__version__}"
+__app_name__ = __agent__
+
+
 
 __log = logging.getLogger(__app_name__)
 
@@ -29,6 +32,7 @@ app = Flask(__app_name__)
 @app.get("/ping")
 async def ping():
     return Response("pong", status=200)
+
 
 # Need an IPC mechanism for this, will revisit this later
 # @app.get("/status")
