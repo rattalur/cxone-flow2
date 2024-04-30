@@ -39,10 +39,11 @@ class RouteNotFoundException(Exception):
 
 class CxOneFlowConfig:
 
-    __log = logging.getLogger("CxOneFlowConfig")
-
     __shared_secret_policy = PasswordPolicy.from_names(length=20, uppercase=3, numbers=3, special=2)
 
+    @staticmethod
+    def log():
+        return logging.getLogger("CxOneFlowConfig")
 
     @staticmethod
     def retrieve_services_by_route(clone_urls):
@@ -57,13 +58,13 @@ class CxOneFlowConfig:
                 if entry[0].match(url):
                     return entry[1], entry[2]
 
-        CxOneFlowConfig.__log.error(f"No route matched for {clone_urls}")
+        CxOneFlowConfig.log().error(f"No route matched for {clone_urls}")
         raise RouteNotFoundException(clone_urls)
 
     @staticmethod
     def bootstrap(config_file_path = "./config.yaml"):
 
-        CxOneFlowConfig.__log.info(f"Loading configuration from {config_file_path}")
+        CxOneFlowConfig.log().info(f"Loading configuration from {config_file_path}")
 
         with open(config_file_path, "rt") as cfg:
             CxOneFlowConfig.__raw = yaml.safe_load(cfg)

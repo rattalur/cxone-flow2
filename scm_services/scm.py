@@ -10,7 +10,10 @@ class RetriesExhausted(Exception):
 
 
 class SCMService:
-    __log = logging.getLogger(__name__)
+
+    @staticmethod
+    def log():
+        return logging.getLogger(__name__)
 
     def __init__(self, moniker, api_session, shared_secret, cloner):
         self.__session = api_session
@@ -36,18 +39,18 @@ class SCMService:
 
         for tryCount in range(0, self.__session.retries):
             
-            SCMService.__log.debug(f"Executing: {prepStr} #{tryCount}")
+            SCMService.log().debug(f"Executing: {prepStr} #{tryCount}")
             response = await asyncio.to_thread(self.__session.send, prepared_request)
             
             logStr = f"{response.status_code}: {response.reason} {prepStr}"
-            SCMService.__log.debug(f"Response: {logStr} #{tryCount}")
+            SCMService.log().debug(f"Response: {logStr} #{tryCount}")
 
             if not response.ok:
                 if response.status_code in [401, 403]:
-                    SCMService.__log.error(f"{prepStr} : Raising authorization exception, not retrying.")
+                    SCMService.log().error(f"{prepStr} : Raising authorization exception, not retrying.")
                     raise SCMAuthException(logStr)
                 else:
-                    SCMService.__log.error(f"{logStr} : Attempt {tryCount}")
+                    SCMService.log().error(f"{logStr} : Attempt {tryCount}")
             else:
                 return response
 

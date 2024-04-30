@@ -1,4 +1,4 @@
-import logging, logging.config, json, os
+import logging, logging.config, json, os, pathlib
 
 
 def get_log_level():
@@ -12,7 +12,15 @@ def load_logging_config_dict(filename):
         return config
     
 def bootstrap():
-        logging.config.dictConfig({
+        
+        dest_file_path = f"/var/log/cxoneflow/cxoneflow.{os.getpid()}.log"
+
+        dir = os.path.dirname(dest_file_path)
+
+        if not os.path.exists(dir):
+             dest_file_path = pathlib.Path(".") / pathlib.Path(dest_file_path).name
+        
+        log_cfg = {
             "version": 1,
             "handlers": {
                 "console": {
@@ -23,11 +31,10 @@ def bootstrap():
                 "file": {
                     "class": "logging.handlers.RotatingFileHandler",
                     "formatter": "default",
-                    "filename": f"/var/log/cxoneflow/cxoneflow.{os.getpid()}.log",
+                    "filename": dest_file_path,
                     "backupCount" : 10,
                     "maxBytes" : 1024000000
                 }
-
             },
             "formatters": {
                 "default": {
@@ -41,4 +48,6 @@ def bootstrap():
                     "level": "DEBUG"
                 }
             }
-        })
+        }
+
+        logging.config.dictConfig(log_cfg)
