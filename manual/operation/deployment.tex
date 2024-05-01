@@ -1,0 +1,34 @@
+\chapter{Deployment}\label{sec:deployment}
+
+If you've created a YAML configuration (Section \ref{sec:op-config}), configured your SCM to emit webhook events
+(Part \ref{part:scms}) and know your runtime configuration requirements (Section \ref{sec:runtime-config}) then
+you are ready to deploy.
+
+\section{Obtaining the Container Image}
+
+\cxoneflow is published as a container image.  If using Docker, the latest image can be pulled and cached locally
+with the following command:
+
+\begin{code}{Caching the \cxoneflow Container Image Locally}{}{}
+docker pull ghcr.io/checkmarx-ts/cxone/cxone-flow:latest
+\end{code}
+
+\noindent\\While \cxoneflow is open source, making your own modified image may be difficult to support.  All
+support for \cxoneflow is provided by Checkmarx Professional Services.
+
+\section{\cxoneflow Execution}
+
+The following is an example of a command where \cxoneflow starts and is ready to accept webhook events:
+
+\begin{code}{\cxoneflow Example Execution}{}{}
+docker run \
+    -v $(pwd)/config.yaml:/opt/cxone/config.yaml \
+    -v $(pwd)/secrets:/run/secrets -p 8000:8000 --rm -it \ 
+    ghcr.io/checkmarx-ts/cxone/cxone-flow:latest
+\end{code}
+
+\noindent\\This executes the container with your defined \texttt{config.yml}, mapping a local directory
+containing secrets files to \texttt{/run/secrets}, and exposing port 8000 locally for receipt of 
+webhook payloads.
+
+
