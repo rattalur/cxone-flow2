@@ -11,7 +11,7 @@ COPY *.txt /opt/cxone
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata && \
-    apt-get install -y python3.12 python3-pip nginx git bash && \
+    apt-get install -y python3.12 python3-pip nginx git openssh-client bash && \
     pip install -r requirements.txt --no-cache-dir --break-system-packages && \
     apt-get autoremove -y && \
     apt-get clean && \
