@@ -1,1 +1,18 @@
-\chapter{Overview}
+\chapter{Overview}\label{sec:overview}
+
+\cxoneflow has origins in CxFlow for the CxSAST product, which is the predecessor to Checkmarx One.  CxFlow
+had a variety of functions and deployment options related to orchestrating scans in CxSAST and sending
+result feedback to issue trackers.  \cxoneflow will also orchestrate scans but is adaptated to the
+concepts of CheckmarxOne.
+
+The \cxoneflow logic of how scans are orchestrated is still very much the same as CxFlow.  The basic
+logic flow is that scans are executed when:
+
+\begin{itemize}
+    \item If a Push is made to a repository's protected branch, that protected branch is scanned.
+    \item If a Pull Request is opened that targets a protected branch, a scan is performed on
+    the source branch.
+    \item If a Push is made to a branch that is the source of an open Pull Request that targets
+    a protected branch, that branch is scanned.
+\end{itemize}
+
