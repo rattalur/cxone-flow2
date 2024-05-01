@@ -16,7 +16,7 @@ jobs:
       - name: Install packages
         run: pip install -r ${{ github.workspace }}/requirements.txt
       - name: Execute Unit Tests
-        run: python -m unittest discover -v -p *_test.py -s ${{ github.workspace }}/
+        run: python -m unittest discover -v -p *_test.py -s ${{ github.workspace }}/tests
 
   docs-manual-build:
     runs-on: ubuntu-latest
