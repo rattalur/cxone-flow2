@@ -1,0 +1,63 @@
+This example shows a minimal \cxoneflow configuration that defines the following:
+
+\begin{enumerate}
+    \item Files containing secrets are located at \texttt{/run/secrets}.
+    \item One BitBucket Data Center SCM connection configuration to handle all webhook payloads
+    POSTed to the \texttt{/bbdc} endpoint.
+    \item One catch-all route for clone-urls using the regular expression \texttt{.*}
+    \item The SCM's base URL located at \texttt{https://scm.corp.com}
+    \item The shared secret used to validate webhook payloads located in the file \texttt{/run/secrets/scm-shared-secret}
+    \item The API and clone authorization using a PAT in a file located at \texttt{/run/secrets/scm-token-secret}
+    \item The CheckmarxOne tenant name of \texttt{mytenant}
+    \item The CheckmarxOne API credentials using an \texttt{oauth} client with:
+    \begin{enumerate}
+        \item The client identifier located in the file \texttt{/run/secrets/my-oauth-id}
+        \item The client secret located in the file \texttt{/run/secrets/my-oauth-secret}
+    \end{enumerate}
+    \item Using the CheckmarxOne multi-tenant US region IAM endpoint.
+    \item Using the CheckmarxOne multi-tenant US region API endpoint.
+\end{enumerate}
+
+\begin{code}{Minimal YAML Configuration Example \#1}{[CxOne: oauth]}{[SCM: token auth]}
+secret-root-path: /run/secrets
+
+bbdc:
+    - service-name: BitBucket DC
+      repo-match: .*
+      connection:
+        base-url: https://scm.corp.com
+        shared-secret: scm-shared-secret
+        api-auth:
+            token: scm-token-secret
+      cxone:
+        tenant: mytenant
+        oauth:
+            client-id: my-oauth-id
+            client-secret: my-oauth-secret
+        iam-endpoint: US
+        api-endpoint: US
+\end{code}
+
+\noindent\\An alternate minimal example using different authorization options:
+
+\begin{code}{Minimal YAML Configuration Example \#2}{[CxOne: api-key]}{[SCM: basic/ssh auth]}
+secret-root-path: /run/secrets
+
+bbdc:
+    - service-name: BitBucket DC
+      repo-match: .*
+      connection:
+      base-url: https://scm.corp.com
+      shared-secret: scm-shared-secret
+      api-auth:
+          username: scm-username-secret
+          password: scm-password-secret
+      clone-auth:
+          ssh: scm-ssh-key-secret
+      cxone:
+      tenant: mytenant
+      api-key: my-cxone-api-key
+      iam-endpoint: US
+      api-endpoint: US
+\end{code}
+    

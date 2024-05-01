@@ -24,7 +24,7 @@ import custom CA certificates when using \cxoneflow.
 \noindent\\As an example, if using Docker, it is possible to map a local file to a file in the container with this mapping option added to the container execution command line:
 
 \begin{code}{Custom CA Mapping Option}{[Docker]}{}
-    -v $(pwd)/custom-ca.pem:/usr/local/share/ca-certificates/custom-ca.crt
+-v $(pwd)/custom-ca.pem:/usr/local/share/ca-certificates/custom-ca.crt
 \end{code}
 
 \subsubsection{Configuring SSL for the \cxoneflow Endpoint}
@@ -69,13 +69,34 @@ to import the custom CA as described in Section \ref{sec:self-signed-certs}.
 \end{table}
 
 
+\newpage
 
 \section{Operational Configuration}
 
 The operational configuration is done using a YAML file mapped at \texttt{/opt/cxone/config.yaml}
 by default.  
 
-\subsection{YAML Configuration}
+\subsection{YAML Configuration Examples}
+
+\subsubsection{Basic YAML Configurations}
+
+\input{operation/yaml_minimal_example.tex}
+
+\newpage
+\noindent\\\input{operation/yaml_full_example.tex}
+
+
+\subsubsection{Complex YAML Configurations using YAML Anchors}
+
+For complex configurations, it is possible to use 
+\href{https://docs.docker.com/compose/compose-file/10-fragments/}{YAML Anchors}
+to avoid repeating some section definitions.  When using YAML anchors, it may be useful
+to use a \href{https://onlineyamltools.com/convert-yaml-to-json}{YAML-to-JSON} conversion tool that shows the JSON generated from the YAML
+definition
+
+\noindent\\\input{operation/yaml_anchors_example.tex}
+
+\subsection{YAML Configuration Elements}
 
 \subsubsection{YAML Root}\label{sec:yaml-root}
 
@@ -92,19 +113,19 @@ are currently supported:
 \noindent\\The value for \texttt{secret-root-path} is the path to a directory that contains one
 or more files containing secret values.  The names to these files are referenced elsewhere
 in the YAML configuration file as described in
-\hyperref[sec:scm-block-structure]{YAML SCM Configuration Structure}.
+\hyperref[sec:scm-block-element]{YAML SCM Configuration Element}.
 
 
-\subsubsection{YAML SCM Configuration Structure}\label{sec:scm-block-structure}
+\subsubsection{YAML SCM Configuration Element}\label{sec:scm-block-element}
 
-The SCM configuration structure is the same for all SCM monikers. The structure is a list with
+The SCM configuration element is the same for all SCM monikers. The element is a list with
 one or more entries corresponding to a clone URL regular expression match.  The entry
 that first matches the clone URL received in the webhook payload is used to configure
 the workflow execution parameters.  Table \ref{tab:scm-section-keys} explains the SCM
 configuration keys for each SCM configuration list entry.
 
 \begin{table}[h]
-    \caption{SCM Configuration YAML Structure}  
+    \caption{SCM Configuration YAML Element}  
     \label{tab:scm-section-keys}      
     \begin{tabularx}{\textwidth}{lcl}
         \toprule
@@ -114,27 +135,28 @@ configuration keys for each SCM configuration list entry.
         \midrule
         \texttt{repo-match} & Yes & \makecell[l]{A regex applied to the source repository.  If the webhook payload has\\a clone URL that matches the regex, this configuration is used to\\orchestrate the scanning.}\\
         \midrule
-        \texttt{scan-config} & No & \makecell[l]{Elements that define the default scan configuration.  The structure\\is described in the section\\"\hyperref[sec:scan-config-structure]{YAML Configuration Structure: \texttt{scan-config}}"}\\
+        \texttt{scan-config} & No & \makecell[l]{Elements that define the default scan configuration.  This element\\is described in the section\\"\hyperref[sec:scan-config-element]{YAML Configuration Element: \texttt{scan-config}}"}\\
         \midrule
-        \texttt{connection} & Yes & \makecell[l]{SCM connection parameters. The structure\\is described in the section\\"\hyperref[sec:connection-structure]{YAML Configuration Structure: \texttt{connection}}"}\\
+        \texttt{connection} & Yes & \makecell[l]{SCM connection parameters. This element\\is described in the section\\"\hyperref[sec:connection-element]{YAML Configuration Element: \texttt{connection}}"}\\
         \midrule
-        \texttt{cxone} & Yes & \makecell[l]{The Checkmarx One tenant connection configuration.  TODO: describe in another section.}\\
+        \texttt{cxone} & Yes & \makecell[l]{The connection configuration for the CheckmarxOne API. This\\element is described in the section\\"\hyperref[sec:cxone-element]{YAML Configuration Element: \texttt{cxone}}"}\\
         \bottomrule
     \end{tabularx}
 \end{table}
 
-\paragraph{YAML Configuration Structure: \texttt{scan-config} }\label{sec:scan-config-structure}
 
-\noindent\\\\The \texttt{scan-config} structure, described in Table \ref{tab:scan-config-section-keys}, allows for default configurations to be applied to each scan.
+\paragraph{YAML Configuration Element: \texttt{scan-config} }\label{sec:scan-config-element}
+
+\noindent\\\\The \texttt{scan-config} element, described in Table \ref{tab:scan-config-section-keys}, allows for default configurations to be applied to each scan.
 
 \begin{table}[h]
-    \caption{\texttt{scan-config} YAML Structure}  
+    \caption{\texttt{scan-config} YAML Element}  
     \label{tab:scan-config-section-keys}      
     \begin{tabularx}{\textwidth}{lcl}
         \toprule
         \textbf{Key} & \textbf{Required} & \textbf{Description}\\
         \midrule
-        \texttt{default-scan-engines} & No & \makecell[l]{A structure that follows the format\\\texttt{<engine-name>:<engine config option dictionary>}\\corresponding to the configuration structure of the\\\href{https://checkmarx.stoplight.io/docs/checkmarx-one-api-reference-guide/branches/main/f601dd9456e80-run-a-scan}{Checkmarx One scan API}.}\\
+        \texttt{default-scan-engines} & No & \makecell[l]{A element that follows the format\\\texttt{<engine-name>:<engine config option dictionary>}\\corresponding to the configuration element of the\\\href{https://checkmarx.stoplight.io/docs/checkmarx-one-api-reference-guide/branches/main/f601dd9456e80-run-a-scan}{Checkmarx One scan API}.}\\
         \midrule
         \texttt{default-scan-tags} & No &  \makecell[l]{A dictionary of static key:value pairs that are assigned to\\each scan.}\\
         \midrule
@@ -144,14 +166,50 @@ configuration keys for each SCM configuration list entry.
 \end{table}
 
 
-\paragraph{YAML Configuration Structure: \texttt{connection} }\label{sec:connection-structure}
+\paragraph{YAML Configuration Element: \texttt{cxone} }\label{sec:cxone-element}
 
-\noindent\\\\The \texttt{connection} structure, described in Table \ref{tab:connection-section-keys}, 
+\noindent\\\\The \texttt{cxone} element, described in Table \ref{tab:cxone-section-keys}, 
+describes the CheckmarxOne API connection parameters.
+
+
+\begin{table}[h]
+    \caption{\texttt{cxone} YAML Element}  
+    \label{tab:cxone-section-keys}      
+    \begin{tabularx}{\textwidth}{lccl}
+        \toprule
+        \textbf{Key} & \textbf{Required} & \textbf{Default} & \textbf{Description}\\
+        \midrule
+        \texttt{tenant} & Yes & N/A & \makecell[l]{The name of the CheckmarxOne tenant.}\\
+        \midrule
+        \texttt{iam-endpoint} & Yes & N/A & \makecell[l]{This can be a fully qualified domain name of a server\\or a multi-tenant IAM endpoint moniker as described\\in Appendix \ref{sec:endpoint-monikers}.}\\
+        \midrule
+        \texttt{api-endpoint} & Yes & N/A & \makecell[l]{This can be a fully qualified domain name of a server\\or a multi-tenant API endpoint moniker as described\\in Appendix \ref{sec:endpoint-monikers}.}\\
+        \midrule
+        \texttt{timeout-seconds} & No & 60s & \makecell[l]{The number of seconds before a request for API\\results times out.}\\
+        \midrule
+        \texttt{retries} & No & 3 & \makecell[l]{The number of retries when the request fails.}\\
+        \midrule
+        \texttt{ssl-verify} & No & True & \makecell[l]{If False, server SSL certificates are not validated.}\\
+        \midrule
+        \texttt{proxies} & No & N/A & \makecell[l]{A dictionary of \texttt{<scheme>:<url>} pairs to use a proxy\\server for requests. See: \href{https://requests.readthedocs.io/en/latest/user/advanced/\#proxies}{Python "requests" proxies}.}\\
+        \midrule
+        \texttt{api-key} & No & N/A & \makecell[l]{If not defined, the \texttt{oauth} element must be defined.\\The value specifies a file name found under the path\\defined by \texttt{secret-root-path}.}\\
+        \midrule
+        \texttt{oauth} & No & N/A & \makecell[l]{If not defined, the \texttt{api-key} element must be defined.\\This contains two required elements \texttt{client-id}\\and \texttt{client-secret} where each value corresponds to\\a file name found under the path defined by\\\texttt{secret-root-path}. }\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+\pagebreak
+\paragraph{YAML Configuration Element: \texttt{connection} }\label{sec:connection-element}
+
+\noindent\\\\The \texttt{connection} element, described in Table \ref{tab:connection-section-keys}, 
 describes the SCM connection parameters used for API access and cloning.
 
 
 \begin{table}[h]
-    \caption{\texttt{connection} YAML Structure}  
+    \caption{\texttt{connection} YAML Element}  
     \label{tab:connection-section-keys}      
     \begin{tabularx}{\textwidth}{lccl}
         \toprule
@@ -169,22 +227,94 @@ describes the SCM connection parameters used for API access and cloning.
         \midrule
         \texttt{proxies} & No & N/A & \makecell[l]{A dictionary of \texttt{<scheme>:<url>} pairs to use a proxy\\server for requests. See: \href{https://requests.readthedocs.io/en/latest/user/advanced/\#proxies}{Python "requests" proxies}.}\\
         \midrule
-        \texttt{api-auth} & Yes & N/A & \makecell[l]{A dictionary of SCM authorization options for using the API. \\TODO: DEFINE THIS IN ANOTHER SECTION}\\
+        \texttt{api-auth} & Yes & N/A & \makecell[l]{A dictionary of SCM authorization options\\for using the API.\\See: \hyperref[sec:api-auth-element]{YAML Configuration Element: \texttt{api-auth}}}\\
         \midrule
-        \texttt{clone-auth} & No & \makecell[l]{\texttt{api-auth}} & \makecell[l]{Authorization options for performing clones when it\\differs from authorization for API requests. TODO: DEFINE IN ANOTHER SECTION}\\
-        \midrule
-        \texttt{} & No & \makecell[l]{}\\
+        \texttt{clone-auth} & No & \makecell[l]{\texttt{api-auth}} & \makecell[l]{Authorization options for performing clones when it\\differs from authorization for API requests.\\See: \hyperref[sec:clone-auth-element]{YAML Configuration Element: \texttt{clone-auth}}}\\
         \bottomrule
     \end{tabularx}
 \end{table}
 
+\pagebreak
+\paragraph{YAML Configuration Element: \texttt{clone-auth} }\label{sec:clone-auth-element}
 
-\subsection{Complete YAML Configuration Examples}
+\noindent\\\\The \texttt{clone-auth} element is optional;  if not provided, the connection information defined
+in \texttt{api-auth} will be used.  This element can contain the following key:value pair combinations:
 
-\subsubsection{YAML without YAML Anchors}
+\noindent\\\textbf{Token Authorization Elements}
 
-\subsubsection{YAML with YAML Anchors}
+\noindent\\To clone with a token, the following elements can appear under the \texttt{clone-auth}
+element exclusive of other elements:
 
-For complex configurations, it is possible to use 
-\href{https://docs.docker.com/compose/compose-file/10-fragments/}{YAML Anchors}
-to avoid repeating some section definitions.
+\begin{itemize}
+    \item \texttt{token} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing a Personal Access Token (PAT).  This is required for
+    token authorization.
+    \item \texttt{username} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing a username associated with the PAT.  This is 
+    optional; if not supplied, the default username of \texttt{git} is used.
+\end{itemize}
+
+\noindent\\\textbf{Basic Authorization Elements}
+
+\noindent\\To clone with basic authorization, the following required elements can appear under the
+\texttt{clone-auth} element exclusive of other elements:
+
+\begin{itemize}
+    \item \texttt{username} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing the username associated with the account used
+    for authorization. 
+    \item \texttt{password} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing the password associated with the account used
+    for authorization. 
+\end{itemize}
+
+\noindent\\\textbf{SSH Authorization Elements}
+
+\noindent\\To clone with SSH, the following required element can appear under the
+\texttt{clone-auth} element exclusive of other elements:
+
+\begin{itemize}
+    \item \texttt{ssh} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing an unencrypted private SSH key.
+\end{itemize}
+
+\paragraph{YAML Configuration Element: \texttt{api-auth} }\label{sec:api-auth-element}
+
+\noindent\\\\The \texttt{api-auth} element is required.  The authorization methods for \texttt{api-auth} 
+are used to communicate with the SCM's API and can often be used for cloning repositories.  The
+main difference between \texttt{api-auth} and \texttt{clone-auth} is that API access generally
+does not support SSH authorization. If there is a need to clone using SSH, configure the SSH
+authorization under the \texttt{clone-auth} element.  This element can contain the following
+key:value pair combinations:
+
+\noindent\\\textbf{Token Authorization Elements}
+
+\noindent\\To access the SCM API or clone with a token, the following elements can appear under the 
+\texttt{api-auth} element exclusive of other elements:
+
+\begin{itemize}
+    \item \texttt{token} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing a Personal Access Token (PAT).  This is required for
+    token authorization.
+    \item \texttt{username} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing a username associated with the PAT.  This is 
+    optional and only used during cloning; if not supplied, the default username of \texttt{git} is used.
+\end{itemize}
+
+\noindent\\\textbf{Basic Authorization Elements}
+
+\noindent\\To access the SCM API or clone with basic authorization, the following required elements can
+appear under the \texttt{api-auth} element exclusive of other elements:
+
+\begin{itemize}
+    \item \texttt{username} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing the username associated with the account used
+    for authorization. 
+    \item \texttt{password} - The value specifies a file name found under the path defined
+    by \texttt{secret-root-path} containing the password associated with the account used
+    for authorization. 
+\end{itemize}
+
+
+
+

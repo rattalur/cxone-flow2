@@ -1,0 +1,61 @@
+This example shows a \cxoneflow configuration using all default options defined
+as a handler when using a single SCM.  This is the same as one of the simple examples if
+an example had explicitly defined omitted default connection elements.
+
+The \texttt{scan-config} element has been added to this configuration to
+demonstrate some of the controls that can be implemented over scan options.  In this
+example, static Project and Scan tags are defined.  Also defined is the selection
+of engines for the scan with some options defined as supported by the engine.  The
+option keys are defined by the
+\href{https://checkmarx.stoplight.io/docs/checkmarx-one-api-reference-guide/branches/main/f601dd9456e80-run-a-scan}{Scan REST API}
+and described by
+\href{https://checkmarx.com/resource/documents/en/34965-68598-global-settings.html#UUID-8e38f06b-45d4-ea7f-5ff5-50deb22e43aa_UUID-1a4211ec-dbf9-a180-cb20-59e1246ec3fb}{Scanners Settings}.
+
+
+\begin{code}{Full YAML Configuration Example}{[CxOne: oauth]}{[SCM: token auth]}
+secret-root-path: /run/secrets
+
+bbdc:
+    - service-name: BitBucket DC
+      repo-match: .*
+      scan-config:
+          default-scan-engines:
+              sca:
+                  exploitablePath: "True"
+              sast:
+                  presetName: ASA Premium
+                  incremental: "False"
+                  fastScanMode: "True"
+                  filter: "!**/node_modules,!**/test*"
+                  languageMode: multi
+              kics:
+              apisec:
+          default-scan-tags:
+              scan-service: BitBucket DC
+          default-project-tags:
+              onboarded-by: CxOneFlow
+      connection:
+          base-url: https://scm.corp.com
+          shared-secret: scm-shared-secret
+          timeout-seconds: 60
+          retries: 3
+          ssl-verify: True
+          proxies:
+            http: http://proxy.corp.com:8080
+            https: http://proxy.corp.com:8080
+          api-auth:
+              token: scm-token-secret
+      cxone:
+          tenant: mytenant
+          oauth:
+              client-id: my-oauth-id
+              client-secret: my-oauth-secret
+          iam-endpoint: US
+          api-endpoint: US
+          timeout-seconds: 60
+          retries: 3
+          ssl-verify: True
+          proxies:
+            http: http://proxy.corp.com:8080
+            https: http://proxy.corp.com:8080
+\end{code}
