@@ -1,0 +1,38 @@
+on:
+  workflow_dispatch:
+  push:
+
+
+jobs:
+   
+  execute-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+      - name: Install packages
+        run: pip install -r ${{ github.workspace }}/requirements.txt
+      - name: Execute Unit Tests
+        run: python -m unittest discover -v -p *_test.py -s ${{ github.workspace }}/
+
+  docs-manual-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+      - name: Build PDF Manual
+        uses: xu-cheng/latex-action@f1ca82cbed861b3534e2997dd584944f55b884ed
+        with:
+          root_file: manual/cxone-flow.tex
+          work_in_root_file_dir: true
+
+  docs-release-notes-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+      - name: Build PDF Release Notes
+        uses: xu-cheng/latex-action@f1ca82cbed861b3534e2997dd584944f55b884ed
+        with:
+          root_file: release_notes/release_notes.tex
+          work_in_root_file_dir: true
