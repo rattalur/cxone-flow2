@@ -24,6 +24,15 @@ Please refer to the [Releases](https://github.com/checkmarx-ts/cxone-flow/releas
 This repository is currently visible internally to Checkmarx only while testing is performed. This section will explain what is currently needed
 before release.
 
+## Execution Features
+
+Currently, only the following features work:
+
+* BitBucket Data Center as an SCM
+* Scans are invoked by Push events targetting protected branches.
+
+
+
 ## BitBucket Data Center Test Environment
 
 A docker image of [Bitbucket Data Cener](https://hub.docker.com/r/atlassian/bitbucket) can be created for testing purposes.
