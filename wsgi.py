@@ -6,7 +6,7 @@ that is compatible with other methods of deployment.
 """
 from _agent import __agent__
 from flask import Flask, request, Response
-from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator
+from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator, AzureDevOpsEnterpriseOrchestrator
 import json, logging, asyncio
 from config import CxOneFlowConfig
 from time import perf_counter_ns
@@ -34,7 +34,6 @@ async def ping():
 
 @app.post("/bbdc")
 async def bbdc_webhook_endpoint():
-    counter = perf_counter_ns()
     __log.info("Received hook for BitBucket Data Center")
     __log.debug(f"bbdc webhook: headers: [{request.headers}] body: [{json.dumps(request.json)}]")
     try:
@@ -45,3 +44,14 @@ async def bbdc_webhook_endpoint():
         return Response(status=400)
 
   
+@app.post("/adoe")
+async def adoe_webhook_endpoint():
+    __log.info("Received hook for Azure DevOps Enterprise")
+    __log.debug(f"adoe webhook: headers: [{request.headers}] body: [{json.dumps(request.json)}]")
+    try:
+        TaskManager.in_background(OrchestrationDispatch.execute(AzureDevOpsEnterpriseOrchestrator(request.headers, request.data)))
+        return Response(status=204)
+    except Exception as ex:
+        __log.exception(ex)
+        return Response(status=400)
+    

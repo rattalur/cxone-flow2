@@ -69,6 +69,8 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
         return None
 
+    async def _get_protected_branches(self, scm_service):
+        return await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
 
     @property
     def _repo_project_key(self):

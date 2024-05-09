@@ -3,7 +3,7 @@ from _agent import __agent__
 from pathlib import Path
 import re
 import yaml, logging, cxone_api as cx, os
-from scm_services import Cloner, bitbucketdc_service_factory
+from scm_services import Cloner, bitbucketdc_service_factory, adoe_service_factory
 from api_utils import auth_bearer, auth_basic, APISession
 from cxone_service import CxOneService
 from password_strength import PasswordPolicy
@@ -282,7 +282,9 @@ class CxOneFlowConfig:
         CxOneFlowConfig.__ordered_scm_config_tuples.append((repo_matcher, cxone_service, scm_service))
 
         
-    __scm_service_factories = {'bbdc' : bitbucketdc_service_factory }
+    __scm_service_factories = {
+        'bbdc' : bitbucketdc_service_factory,
+        'adoe' : adoe_service_factory }
 
         
 

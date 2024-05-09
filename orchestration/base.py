@@ -54,7 +54,8 @@ class OrchestratorBase:
     async def _execute_push_scan_workflow(self, cxone_service, scm_service):
         OrchestratorBase.log().debug("_execute_push_scan_workflow")
 
-        protected_branches = await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
+        protected_branches = await self._get_protected_branches(scm_service)
+
         commit_branch, commit_hash = await self._get_target_branch_and_hash()
         clone_url = self._repo_clone_url(scm_service.cloner)
 
@@ -65,7 +66,6 @@ class OrchestratorBase:
             check = perf_counter_ns()
             
             OrchestratorBase.log().debug("Starting clone...")
-
             async with scm_service.cloner.clone(clone_url) as clone_worker:
                 code_path = await clone_worker.loc()
 
@@ -111,6 +111,8 @@ class OrchestratorBase:
     async def _get_target_branch_and_hash(self):
         raise NotImplementedError("_get_target_branch_and_hash")
 
+    async def _get_protected_branches(self, scm_service):
+        raise NotImplementedError("_get_protected_branches")
 
     async def is_signature_valid(self, shared_secret):
         raise NotImplementedError("is_signature_valid")
@@ -123,7 +125,7 @@ class OrchestratorBase:
     def _repo_slug(self):
         raise NotImplementedError("_repo_slug")
 
-    def _repo_clone_url(self, protocol=None):
+    def _repo_clone_url(self, cloner):
         raise NotImplementedError("_repo_clone_uri")
 
     @property
