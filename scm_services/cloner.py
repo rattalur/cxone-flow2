@@ -1,7 +1,10 @@
-import os, tempfile, shutil, shlex, subprocess, asyncio, logging, urllib, base64
+import os, tempfile, shutil, shlex, subprocess, asyncio, logging, urllib, base64, re
 
 
 class Cloner:
+
+    __https_matcher = re.compile("^http(s)?")
+    __ssh_matcher = re.compile("^ssh")
 
     def __init__(self):
         self.__env = dict(os.environ)
@@ -21,7 +24,7 @@ class Cloner:
         Cloner.log().debug("Clone config: using_basic_auth")
 
         retval = Cloner()
-        retval.__protocol = "https"
+        retval.__protocol_matcher = Cloner.__https_matcher
         retval.__username = username
         retval.__password = password
 
@@ -37,7 +40,7 @@ class Cloner:
         Cloner.log().debug("Clone config: using_token_auth")
 
         retval = Cloner()
-        retval.__protocol = "https"
+        retval.__protocol_matcher = Cloner.__https_matcher
 
         retval.__clone_cmd_stub = ["git", "clone", "-c", f"http.extraHeader=Authorization: Bearer {token}"]
 
@@ -50,7 +53,7 @@ class Cloner:
         Cloner.log().debug("Clone config: using_ssh_auth")
 
         retval = Cloner()
-        retval.__protocol = "ssh"
+        retval.__protocol_matcher = Cloner.__ssh_matcher
         with open(ssh_private_key_file, "rt") as source:
             with tempfile.NamedTemporaryFile(mode="wt", delete_on_close=False, delete=False) as dest:
                 shutil.copyfileobj(source, dest)
@@ -62,10 +65,12 @@ class Cloner:
         retval.__fix_clone_url = lambda url: url
 
         return retval
-    
-    @property
-    def clone_protocol(self):
-        return self.__protocol
+   
+    def select_protocol(self, protocol_list):
+        for x in protocol_list:
+            if self.__protocol_matcher.match(x):
+                return x
+        return None
 
     def clone(self, clone_url):
         Cloner.log().debug(f"Clone Execution for: {clone_url}")

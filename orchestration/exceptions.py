@@ -1,0 +1,3 @@
+
+class OrchestrationException(BaseException):
+    pass

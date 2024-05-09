@@ -78,11 +78,8 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
     def _repo_slug(self):
         return self.__repo_slug
 
-    def _repo_clone_url(self, protocol=None):
-        if protocol is None or protocol not in self.__clone_urls.keys():
-            return self.__route_urls[0]
-        else:
-            return self.__clone_urls[protocol]
+    def _repo_clone_url(self, cloner):
+        return self.__clone_urls[cloner.select_protocol(self.__clone_urls.keys())]
         
     @property
     def _repo_name(self):

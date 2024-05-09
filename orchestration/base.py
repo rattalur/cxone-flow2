@@ -2,6 +2,7 @@ import zipfile, tempfile, logging
 from pathlib import Path, PurePath
 from time import perf_counter_ns
 from _version import __version__
+from .exceptions import OrchestrationException
 
 class OrchestratorBase:
 
@@ -55,7 +56,10 @@ class OrchestratorBase:
 
         protected_branches = await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
         commit_branch, commit_hash = await self._get_target_branch_and_hash()
-        clone_url = self._repo_clone_url(scm_service.cloner.clone_protocol)
+        clone_url = self._repo_clone_url(scm_service.cloner)
+
+        if clone_url is None:
+            raise OrchestrationException("Clone URL could not be determined.")
 
         if commit_branch in protected_branches:
             check = perf_counter_ns()

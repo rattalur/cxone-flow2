@@ -2,6 +2,8 @@ import requests, asyncio
 from _agent import __agent__
 from _version import __version__
 from time import perf_counter_ns
+from cxone_api.scanning import ScanInvoker
+from cxone_api.projects import ProjectRepoConfig
 
 class CxOneException(Exception):
     pass
@@ -54,25 +56,7 @@ class CxOneService:
                 project_json['tags'] = new_tags | project_json['tags']
                 CxOneService.__succeed_or_throw(await self.__client.update_project(project_id, project_json))
 
-
-
-
-        upload_url = await self.__client.upload_zip(zip_path)
-
-        scan_response = CxOneService.__get_json_or_fail(await self.__client.execute_scan(\
-            {
-            "type" : "upload",
-            "handler"  : { 
-                "uploadUrl" : upload_url,
-                "repoUrl" : repo_url,
-                "branch" : commit_branch
-                },
-            "tags" : scan_tags | self.__default_scan_tags,
-            "config" : [] if self.__default_engines is None else \
-            [{"type" : engine, "value" : self.__default_engines[engine] if self.__default_engines[engine] is not None else {} } \
-             for engine in self.__default_engines.keys()], \
-            "project" : {"id" : project_id}}))
-    
-        return scan_response
-
-    
+        return CxOneService.__get_json_or_fail(await ScanInvoker.scan_get_response(self.__client, 
+                await ProjectRepoConfig.from_loaded_json(self.__client, project_json), commit_branch, 
+                self.__default_engines, scan_tags | self.__default_scan_tags, zip_path))
+   
