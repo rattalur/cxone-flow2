@@ -3,7 +3,7 @@ from _agent import __agent__
 from pathlib import Path
 import re
 import yaml, logging, cxone_api as cx, os
-from scm_services import Cloner, bitbucketdc_service_factory, adoe_service_factory
+from scm_services import bitbucketdc_cloner_factory, adoe_cloner_factory, SCMService
 from api_utils import auth_bearer, auth_basic, APISession
 from cxone_service import CxOneService
 from password_strength import PasswordPolicy
@@ -74,15 +74,15 @@ class CxOneFlowConfig:
         else:
             CxOneFlowConfig.__secret_root = CxOneFlowConfig.__raw['secret-root-path']
 
-        if len(CxOneFlowConfig.__raw.keys() - CxOneFlowConfig.__scm_service_factories.keys()) == len(CxOneFlowConfig.__raw.keys()):
-            raise ConfigurationException.missing_at_least_one_key_path("/", CxOneFlowConfig.__scm_service_factories.keys())
+        if len(CxOneFlowConfig.__raw.keys() - CxOneFlowConfig.__cloner_factories.keys()) == len(CxOneFlowConfig.__raw.keys()):
+            raise ConfigurationException.missing_at_least_one_key_path("/", CxOneFlowConfig.__cloner_factories.keys())
         
-        for scm in CxOneFlowConfig.__scm_service_factories.keys():
+        for scm in CxOneFlowConfig.__cloner_factories.keys():
 
             if scm in CxOneFlowConfig.__raw.keys():
                 index = 0
                 for repo_config_dict in CxOneFlowConfig.__raw[scm]:
-                    CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__scm_service_factories[scm], repo_config_dict, f"/{scm}[{index}]")
+                    CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__cloner_factories[scm], repo_config_dict, f"/{scm}[{index}]")
                     index += 1
 
     @staticmethod
@@ -93,15 +93,25 @@ class CxOneFlowConfig:
             return config_dict[key]
 
     @staticmethod
-    def __get_secret_from_value_of_key_or_fail(config_path, key, config_dict):
+    def __get_secret_from_value_of_key_or_default(config_dict, key, default):
         if not key in config_dict.keys():
-            raise ConfigurationException.missing_key_path(f"{config_path}/{key}")
+            return default
         else:
             if not os.path.isfile(Path(CxOneFlowConfig.__secret_root) / Path(config_dict[key])):
-                raise ConfigurationException.invalid_value(f"{config_path}/{key}")
+                return default
             else:
                 with open(Path(CxOneFlowConfig.__secret_root) / Path(config_dict[key]), "rt") as secret:
                     return secret.readline().strip()
+
+    @staticmethod
+    def __get_secret_from_value_of_key_or_fail(config_path, key, config_dict):
+        retval = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(config_dict, key, None)
+
+        if retval is None:
+            raise ConfigurationException.missing_key_path(f"{config_path}/{key}")
+        
+        return retval
+
 
     @staticmethod
     def __get_value_for_key_or_default(key, config_dict, default):
@@ -215,29 +225,26 @@ class CxOneFlowConfig:
 
 
     @staticmethod
-    def __cloner_factory(clone_auth_dict, config_path):
+    def __cloner_factory(scm_cloner_factory, clone_auth_dict, config_path):
 
         CxOneFlowConfig.__validate_no_extra_auth_keys(clone_auth_dict, CxOneFlowConfig.__all_possible_clone_auth_keys, config_path)
 
-        auth_type_keys = CxOneFlowConfig.__validate_minimum_auth_keys(clone_auth_dict, CxOneFlowConfig.__minimum_clone_auth_keys, config_path)
+        ssh_secret = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'ssh', None)
+        if ssh_secret is not None:
+            ssh_secret = Path(CxOneFlowConfig.__secret_root) / Path(ssh_secret)
+
+        retval = scm_cloner_factory(CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'username', None),
+                                  CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'password', None),
+                                  CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'token', None),
+                                  ssh_secret)
+
+        if retval is None:
+            raise ConfigurationException(f"{config_path} SCM clone authorization configuration is invalid!")
         
-        if len([x for x in clone_auth_dict.keys() if x in CxOneFlowConfig.__basic_auth_keys]) == len(CxOneFlowConfig.__basic_auth_keys):
-            return Cloner.using_basic_auth( \
-                CxOneFlowConfig.__get_secret_from_value_of_key_or_fail({config_path}, 'username', clone_auth_dict), \
-                CxOneFlowConfig.__get_secret_from_value_of_key_or_fail({config_path}, 'password', clone_auth_dict) )
-
-        if 'token' in auth_type_keys:
-            return Cloner.using_token_auth(CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(config_path, 'token', clone_auth_dict),
-                                           CxOneFlowConfig.__get_value_for_key_or_default('username', clone_auth_dict, None))
-
-        if 'ssh' in auth_type_keys:
-            return Cloner.using_ssh_auth(Path(CxOneFlowConfig.__secret_root) / 
-                                         Path(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'ssh', clone_auth_dict)))
-
-        raise ConfigurationException(f"{config_path} SCM clone authorization configuration is invalid!")
+        return retval
 
     @staticmethod
-    def __setup_scm(scm_service_factory, config_dict, config_path):
+    def __setup_scm(cloner_factory, config_dict, config_path):
         repo_matcher = re.compile(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'repo-match', config_dict), re.IGNORECASE)
 
         service_moniker = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'service-name', config_dict)
@@ -277,14 +284,14 @@ class CxOneFlowConfig:
             clone_auth_dict = api_auth_dict
             clone_config_path = f"{config_path}/connection/api-auth"
                
-        scm_service = scm_service_factory(service_moniker, api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(clone_auth_dict, clone_config_path))
+        scm_service = SCMService(service_moniker, api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(cloner_factory, clone_auth_dict, clone_config_path))
       
         CxOneFlowConfig.__ordered_scm_config_tuples.append((repo_matcher, cxone_service, scm_service))
 
-        
-    __scm_service_factories = {
-        'bbdc' : bitbucketdc_service_factory,
-        'adoe' : adoe_service_factory }
+
+    __cloner_factories = {
+        'bbdc' : bitbucketdc_cloner_factory,
+        'adoe' : adoe_cloner_factory }
 
         
 

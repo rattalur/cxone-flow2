@@ -2,6 +2,7 @@ from .base import OrchestratorBase
 import json
 from api_utils import signature
 from jsonpath_ng import parse
+from .exceptions import OrchestrationException
 
 class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
@@ -70,7 +71,37 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         return None
 
     async def _get_protected_branches(self, scm_service):
-        return await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
+        # return await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
+        retBranches = []
+        model_resp = await scm_service.exec("GET", f"/rest/branch-utils/latest/projects/{self._repo_project_key}/repos/{self._repo_slug}/branchmodel")
+
+        if not model_resp.ok:
+            raise OrchestrationException.from_response(model_resp)
+
+        json = model_resp.json()
+        
+        if 'development' in json.keys() and 'displayId' in json['development'].keys():
+            retBranches.append(json['development']['displayId'])
+        
+        if 'production' in json.keys() and 'displayId' in json['production'].keys():
+            retBranches.append(json['production']['displayId'])
+        
+        return list(set(retBranches))
+
+    async def _get_default_branch(self, project, slug):
+        default_resp = await self.exec("GET", f"/rest/api/latest/projects/{project}/repos/{slug}/default-branch")
+
+        if not default_resp.ok:
+            raise OrchestrationException.from_response(default_resp)
+
+        json = default_resp.json()
+        
+        return json['displayId'] if "displayId" in json.keys() else ""
+
+
+    async def get_cxone_project_name(self):
+        # TODO: Verify project key or full name is used in CxOne by SCM import to make it consistent.
+        return f"{self._repo_project_key}/{self._repo_name}"
 
     @property
     def _repo_project_key(self):

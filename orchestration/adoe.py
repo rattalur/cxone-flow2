@@ -1,5 +1,5 @@
 from .base import OrchestratorBase
-import json, base64
+import json, base64, urllib
 from jsonpath_ng import parse
 
 
@@ -52,8 +52,12 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         return self.__repo_key
 
     @property
-    def _repo_slug(self):
+    def _repo_name(self):
         return self.__repo_slug
+
+    @property
+    def _repo_slug(self):
+        return urllib.parse.quote(self.__repo_slug)
     
     async def is_signature_valid(self, shared_secret):
         base64_payload = self._headers['Authorization'].split(" ")[-1:].pop()
@@ -64,12 +68,18 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         return self.__clone_url
     
     async def _get_protected_branches(self, scm_service):
+        # TODO: Default branch is in webhook payload, but there is a branch control mechanism
+        # used to specify deployment branches.  The deployment branches should merge with the default branch.
         return self.__default_branches
 
     async def _get_target_branch_and_hash(self):
         first_target_branch = AzureDevOpsEnterpriseOrchestrator.__normalize_branch_name([x.value for x in list(self.__target_branch_query.find(self.__json))][0])
         first_target_hash = [x.value for x in list(self.__target_hash_query.find(self.__json))][0]
         return first_target_branch, first_target_hash
+
+    async def get_cxone_project_name(self):
+        # TODO: Need to get the collection name
+        return f"{self._repo_project_key}/{self._repo_name}"
 
 
     __workflow_map = {

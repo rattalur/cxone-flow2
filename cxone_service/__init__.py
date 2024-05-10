@@ -10,11 +10,13 @@ class CxOneException(Exception):
 
 class CxOneService:
 
+    __minimum_engine_selection = ['sast']
+
     def __init__(self, moniker, cxone_client, default_engines, default_scan_tags, default_project_tags):
         self.__client = cxone_client
         self.__moniker = moniker
-        self.__default_project_tags = default_project_tags
-        self.__default_scan_tags = default_scan_tags
+        self.__default_project_tags = default_project_tags if default_project_tags is not None else {}
+        self.__default_scan_tags = default_scan_tags if default_scan_tags is not None else {}
         self.__default_engines = default_engines
     
     @property
@@ -24,7 +26,7 @@ class CxOneService:
     @staticmethod
     def __get_json_or_fail(response):
         if not response.ok:
-            raise CxOneException(f"Method: {response.request.method} Url: {response.request.url} Status: {response.status_code}")
+            raise CxOneException(f"Method: {response.request.method} Url: {response.request.url} Status: {response.status_code} Body: {response.text}")
         else:
             return response.json()
 
@@ -36,9 +38,7 @@ class CxOneService:
             return response
 
 
-    async def execute_scan(self, zip_path, org_name, repo_name, commit_branch, repo_url, scan_tags={}):
-
-        project_name = f"{org_name}/{repo_name}"
+    async def execute_scan(self, zip_path, project_name, commit_branch, repo_url, scan_tags={}):
 
         projects_response = CxOneService.__get_json_or_fail (await self.__client.get_projects(name=project_name))
 
@@ -56,7 +56,16 @@ class CxOneService:
                 project_json['tags'] = new_tags | project_json['tags']
                 CxOneService.__succeed_or_throw(await self.__client.update_project(project_id, project_json))
 
+        project_config = await ProjectRepoConfig.from_loaded_json(self.__client, project_json)
+
+        engines = self.__default_engines
+
+        if engines is None:
+            engines = await project_config.get_enabled_scanners(commit_branch)
+
+        if len(engines) == 0:
+            engines = CxOneService.__minimum_engine_selection
+
         return CxOneService.__get_json_or_fail(await ScanInvoker.scan_get_response(self.__client, 
-                await ProjectRepoConfig.from_loaded_json(self.__client, project_json), commit_branch, 
-                self.__default_engines, scan_tags | self.__default_scan_tags, zip_path))
+                project_config, commit_branch, engines, scan_tags | self.__default_scan_tags, zip_path))
    

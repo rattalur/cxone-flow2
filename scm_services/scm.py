@@ -62,7 +62,7 @@ class SCMService:
         return f"{base}/{suffix}"
     
     
-    async def _exec(self, method, path, query=None, body=None, extra_headers=None):
+    async def exec(self, method, path, query=None, body=None, extra_headers=None):
         return await self.__exec_request(Request(method=method, \
                                                 url = self.__form_url(path), \
                                                 params=query, \
@@ -75,9 +75,7 @@ class SCMService:
 
     async def get_default_branch(self, project, slug):
         raise NotImplementedError("get_default_branch")
-    
-    async def validate_signature(self, headers, raw_payload):
-        raise NotImplementedError("validate_signature")
+   
 
 
 

@@ -92,7 +92,7 @@ class OrchestratorBase:
                     }
 
                     try:
-                        scan_submit = await cxone_service.execute_scan(zip_file.name, self._repo_project_key, self._repo_name, \
+                        scan_submit = await cxone_service.execute_scan(zip_file.name, await self.get_cxone_project_name(), \
                                                                         commit_branch, clone_url, scan_tags)
 
                         OrchestratorBase.log().debug(scan_submit)
@@ -116,6 +116,9 @@ class OrchestratorBase:
 
     async def is_signature_valid(self, shared_secret):
         raise NotImplementedError("is_signature_valid")
+    
+    async def get_cxone_project_name(self):
+        raise NotImplementedError("get_cxone_project_name")
     
     @property
     def _repo_project_key(self):

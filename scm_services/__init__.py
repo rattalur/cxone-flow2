@@ -1,19 +1,25 @@
 from .cloner import Cloner
+from .scm import SCMService
 
+def bitbucketdc_cloner_factory(username=None, password=None, token=None, ssh_path=None):
+        
+    if username is not None and password is not None:
+            return Cloner.using_basic_auth(username, password) 
+    
+    if token is not None:
+            return Cloner.using_token_auth(token, username)
+    
+    if ssh_path is not None:
+            return Cloner.using_ssh_auth(ssh_path)
 
-def bitbucketdc_service_factory(moniker, session, shared_secret, cloner):
-    """
-    A factory method that creates a service for use with Bitbucket Data Center.
-    """
-    from . import bbdc
-    return bbdc.BitBucketDataCenterService(moniker, session, shared_secret, cloner)
+    return None        
 
-
-def adoe_service_factory(moniker, session, shared_secret, cloner):
-    """
-    A factory method that creates a service for use with Azure DevOps Enterprise.
-    """
-    from . import ado
-    return ado.ADOEnterpriseService(moniker, session, shared_secret, cloner)
-
-
+def adoe_cloner_factory(username=None, password=None, token=None, ssh_path=None):
+    if username is not None and password is not None:
+            return Cloner.using_url_creds(username, password) 
+    
+    if token is not None:
+            return Cloner.using_basic_auth("", token)
+    
+    if ssh_path is not None:
+            return Cloner.using_ssh_auth(ssh_path)
