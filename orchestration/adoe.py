@@ -1,6 +1,7 @@
 from .base import OrchestratorBase
-import json, base64, urllib
+import json, base64, urllib, urllib.parse
 from jsonpath_ng import parse
+from cxone_api.util import CloneUrlParser
 
 
 class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
@@ -64,8 +65,18 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         sent_secret = base64.b64decode(base64_payload).decode("utf-8").split(":")[-1:].pop()
         return sent_secret == shared_secret
 
+
     def _repo_clone_url(self, cloner):
-        return self.__clone_url
+        parsed_clone_url = urllib.parse.urlparse(self.__clone_url)
+
+        if parsed_clone_url.scheme in cloner.supported_protocols:
+            return self.__clone_url
+        
+        protocol = cloner.supported_protocols[0]
+        port = cloner.destination_port
+
+        return urllib.parse.urlunparse((protocol, f"{parsed_clone_url.netloc}{f":{port}" if port is not None else ""}", 
+                                       parsed_clone_url.path, parsed_clone_url.params, parsed_clone_url.query, parsed_clone_url.fragment))
     
     async def _get_protected_branches(self, scm_service):
         # TODO: Default branch is in webhook payload, but there is a branch control mechanism
@@ -78,8 +89,8 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         return first_target_branch, first_target_hash
 
     async def get_cxone_project_name(self):
-        # TODO: Need to get the collection name
-        return f"{self._repo_project_key}/{self._repo_name}"
+        p = CloneUrlParser("azure", self.__clone_url)
+        return f"{p.org}/{self._repo_project_key}/{self._repo_name}"
 
 
     __workflow_map = {

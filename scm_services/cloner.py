@@ -6,6 +6,9 @@ class Cloner:
     __https_matcher = re.compile("^http(s)?")
     __ssh_matcher = re.compile("^ssh")
 
+    __http_protocols = ['http', 'https']
+    __ssh_protocols = ['ssh']
+
     def __init__(self):
         self.__env = dict(os.environ)
 
@@ -25,6 +28,8 @@ class Cloner:
 
         retval = Cloner()
         retval.__protocol_matcher = Cloner.__https_matcher
+        retval.__supported_protocols = Cloner.__http_protocols
+        retval.__port = None
         retval.__username = username
         retval.__password = password
 
@@ -41,6 +46,8 @@ class Cloner:
 
         retval = Cloner()
         retval.__protocol_matcher = Cloner.__https_matcher
+        retval.__supported_protocols = Cloner.__http_protocols
+        retval.__port = None
         retval.__username = username
         retval.__password = password
 
@@ -55,6 +62,8 @@ class Cloner:
 
         retval = Cloner()
         retval.__protocol_matcher = Cloner.__https_matcher
+        retval.__supported_protocols = Cloner.__http_protocols
+        retval.__port = None
 
         retval.__clone_cmd_stub = ["git", "clone", "-c", f"http.extraHeader=Authorization: Bearer {token}"]
 
@@ -63,28 +72,38 @@ class Cloner:
         return retval
 
     @staticmethod
-    def using_ssh_auth(ssh_private_key_file):
+    def using_ssh_auth(ssh_private_key_file, ssh_port):
         Cloner.log().debug("Clone config: using_ssh_auth")
 
         retval = Cloner()
         retval.__protocol_matcher = Cloner.__ssh_matcher
+        retval.__supported_protocols = Cloner.__ssh_protocols
+        retval.__port = ssh_port
         with open(ssh_private_key_file, "rt") as source:
             with tempfile.NamedTemporaryFile(mode="wt", delete_on_close=False, delete=False) as dest:
                 shutil.copyfileobj(source, dest)
                 retval.__keyfile = dest.file.name
 
-        retval.__env['GIT_SSH_COMMAND'] = f"ssh -i '{shlex.quote(retval.__keyfile)}' -o IdentitiesOnly=yes -oStrictHostKeyChecking=accept-new"
+        retval.__env['GIT_SSH_COMMAND'] = f"ssh -i '{shlex.quote(retval.__keyfile)}' -oIdentitiesOnly=yes -oStrictHostKeyChecking=accept-new -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa"
         retval.__clone_cmd_stub = ["git", "clone"]
 
         retval.__fix_clone_url = lambda url: url
 
         return retval
    
-    def select_protocol(self, protocol_list):
+    def select_protocol_from_supported(self, protocol_list):
         for x in protocol_list:
             if self.__protocol_matcher.match(x):
                 return x
         return None
+    
+    @property
+    def supported_protocols(self):
+        return self.__supported_protocols
+
+    @property
+    def destination_port(self):
+        return self.__port
 
     def clone(self, clone_url):
         Cloner.log().debug(f"Clone Execution for: {clone_url}")

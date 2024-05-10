@@ -189,7 +189,7 @@ class CxOneFlowConfig:
     __all_possible_api_auth_keys = list(set(__minimum_api_auth_keys + __basic_auth_keys))
 
     __minimum_clone_auth_keys = __minimum_api_auth_keys + ['ssh']
-    __all_possible_clone_auth_keys = list(set(__minimum_clone_auth_keys + __basic_auth_keys))
+    __all_possible_clone_auth_keys = list(set(__minimum_clone_auth_keys + __basic_auth_keys + ['ssh-port']))
 
     @staticmethod
     def __scm_api_auth_factory(config_dict, config_path):
@@ -229,14 +229,15 @@ class CxOneFlowConfig:
 
         CxOneFlowConfig.__validate_no_extra_auth_keys(clone_auth_dict, CxOneFlowConfig.__all_possible_clone_auth_keys, config_path)
 
-        ssh_secret = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'ssh', None)
+        ssh_secret = CxOneFlowConfig.__get_value_for_key_or_default('ssh', clone_auth_dict, None)
         if ssh_secret is not None:
             ssh_secret = Path(CxOneFlowConfig.__secret_root) / Path(ssh_secret)
 
         retval = scm_cloner_factory(CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'username', None),
                                   CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'password', None),
                                   CxOneFlowConfig.__get_secret_from_value_of_key_or_default(clone_auth_dict, 'token', None),
-                                  ssh_secret)
+                                  ssh_secret,
+                                  CxOneFlowConfig.__get_value_for_key_or_default('ssh-port', clone_auth_dict, None))
 
         if retval is None:
             raise ConfigurationException(f"{config_path} SCM clone authorization configuration is invalid!")
