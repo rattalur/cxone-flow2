@@ -79,8 +79,6 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
                                        parsed_clone_url.path, parsed_clone_url.params, parsed_clone_url.query, parsed_clone_url.fragment))
     
     async def _get_protected_branches(self, scm_service):
-        # TODO: Default branch is in webhook payload, but there is a branch control mechanism
-        # used to specify deployment branches.  The deployment branches should merge with the default branch.
         return self.__default_branches
 
     async def _get_target_branch_and_hash(self):
