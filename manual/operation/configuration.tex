@@ -105,7 +105,9 @@ and one or more unique SCM configuration monikers.  The following SCM configurat
 are currently supported:
 
 \begin{itemize}
-    \item \texttt{bbdc} for BitBucket Data Center hook payloads targetting the \texttt{/bbdc}
+    \item \texttt{bbdc} for BitBucket Data Center webhook payloads targeting the \texttt{/bbdc}
+    webhook payload receiver endpoint.
+    \item \texttt{adoe} for Azure DevOps Enterprise webhook payloads targeting the \texttt{/adoe}
     webhook payload receiver endpoint.
 \end{itemize}
 
@@ -276,6 +278,9 @@ element exclusive of other elements:
 \begin{itemize}
     \item \texttt{ssh} - The value specifies a file name found under the path defined
     by \texttt{secret-root-path} containing an unencrypted private SSH key.
+    \item \texttt{ssh-port} - This optional value specifies the port used for SSH cloning
+    if the SCM is not using port 22 and does not automatically include it in the clone
+    URL.
 \end{itemize}
 
 \paragraph{YAML Configuration Element: \texttt{api-auth} }\label{sec:api-auth-element}

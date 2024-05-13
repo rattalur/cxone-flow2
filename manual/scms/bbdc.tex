@@ -1,5 +1,13 @@
 \chapter{BitBucket Data Center}
 
+\section{About BitBucket Data Center}
+
+BitBucket Data Center is often confused with BitBucket Cloud; it should be noted that
+the configuration for BitBucket Data Center is not compatible with BitBucket Cloud.
+
+\noindent\\The \cxoneflow endpoint \texttt{/bbdc} is the handler for all webhook event
+payloads originating from BitBucket Data Center.  
+
 
 \section{Webhook Configuration}
 
@@ -13,10 +21,8 @@ project key will appear in clone URLs and can be used as part of the regular exp
 placed in the \texttt{repo-match} configuration element.  Please see Section \ref{sec:scm-block-element} 
 for a description of the \texttt{repo-match} configuration element.
 
-The project's "Webhooks" configuration can be used to configure the \cxoneflow endpoint that will receive
-the webhook events for each repository in the organization.  The \texttt{/bbdc} endpoint should be used
-so the \cxoneflow endpoint understands the format of the event payload so it can properly orchestrate the
-scan workflow. 
+The project's "Webhooks" configuration can be used to configure the \cxoneflow endpoint 
+\texttt{/bbdc} to receive webhook events for each repository in the organization.  
 
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{graphics/bbdc-project-config.png}
@@ -113,6 +119,23 @@ token permissions for \cxoneflow operations are:
     \caption{BitBucket Data Center Project-Level HTTP Access Token Config}
     \label{fig:bbdc-token-config}
 \end{figure}
+
+Project-level access tokens do not have an associated user account.  If using project-level
+access tokens, one project-level token is required per-project for which \cxoneflow is
+orchestrating scans.
+
+\section{\cxoneflow SSH Keys}
+
+While performing scan orchestration, \cxoneflow does access the BitBucket Data Center API for
+certain operations.  This requires a configuration in the \texttt{api-auth} configuration
+element as described in Section \ref{sec:api-auth-element}.  The \texttt{clone-auth},
+described in Section \ref{sec:clone-auth-element}, is an optional element where the credentials
+used for cloning code can be provided.  If \texttt{clone-auth} is not provided, cloning will
+be attempted using the credentials defined by \texttt{api-auth}.
+
+The \texttt{clone-auth} configuration can define an SSH private key for use in cloning.  This
+will allow for a separate set of credentials or authentication methods between cloning and
+API use.
 
 
 \section{Protected Branches}

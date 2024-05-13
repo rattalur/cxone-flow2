@@ -38,6 +38,7 @@ bbdc:
         api-endpoint: US
 \end{code}
 
+\pagebreak
 \noindent\\An alternate minimal example using different authorization options:
 
 \begin{code}{Minimal YAML Configuration Example \#2}{[CxOne: api-key]}{[SCM: basic/ssh auth]}
@@ -55,9 +56,33 @@ bbdc:
       clone-auth:
           ssh: scm-ssh-key-secret
       cxone:
-      tenant: mytenant
-      api-key: my-cxone-api-key
-      iam-endpoint: US
-      api-endpoint: US
+        tenant: mytenant
+        api-key: my-cxone-api-key
+        iam-endpoint: US
+        api-endpoint: US
 \end{code}
     
+\pagebreak
+\noindent\\An alternate minimal example using for an Azure DevOps Enterprise
+SCM:
+
+\begin{code}{Minimal YAML Configuration Example \#2}{[CxOne: api-key]}{[SCM: basic/ssh auth]}
+secret-root-path: /run/secrets
+
+adoe:
+    - service-name: MyADO
+      repo-match: .*
+      connection:
+      base-url: https://scm.corp.com
+      shared-secret: scm-shared-secret
+      api-auth:
+          username: scm-username-secret
+          password: scm-password-secret
+      clone-auth:
+          ssh: scm-ssh-key-secret
+      cxone:
+        tenant: mytenant
+        api-key: my-cxone-api-key
+        iam-endpoint: US
+        api-endpoint: US
+\end{code}

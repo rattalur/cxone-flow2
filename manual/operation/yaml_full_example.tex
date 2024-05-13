@@ -59,3 +59,74 @@ bbdc:
             http: http://proxy.corp.com:8080
             https: http://proxy.corp.com:8080
 \end{code}
+
+
+\noindent\\This example shows a configuration where \cxoneflow has endpoint handlers for both
+BitBucket Data Center and Azure DevOps Enterprise.  Each SCM is configured to handle 3 distinct
+projects to demonstrate Basic, Token, and SSH authentication methods.  All the SCM endpoints
+orchestrate scans in a single Checkmarx One tenant.
+
+\begin{code}{Multi-SCM YAML Configuration Example}{}{}
+secret-root-path: /run/secrets
+adoe-connection: &adoe-con
+    base-url: http://adoe.scm.org
+    shared-secret: scm-shared-secret
+bbdc-connection: &bbdc-con
+    base-url: http://bbdc.scm.org
+    shared-secret: scm-shared-secret
+adoe:
+    - service-name: ADO-AsSSH
+        repo-match: .*MySSHProject
+        connection:
+        <<: *adoe-con
+        api-auth: 
+            token: adoe-token-secret
+        clone-auth: &clone-ssh
+            ssh: ssh-priv-key
+        cxone: &cxone
+        tenant: my_tenant
+        oauth:
+            client-id: prod_client_id
+            client-secret: prod_client_secret
+        iam-endpoint: US
+        api-endpoint: US
+    - service-name: ADO-AsToken
+        repo-match: .*MyTokenProject
+        connection:
+        <<: *adoe-con
+        api-auth:
+            token: adoe-token-secret
+        cxone: *cxone
+    - service-name: ADO-AsBasicAuth
+        repo-match: .*MyBasicAuthProject
+        connection:
+        <<: *adoe-con
+        api-auth:
+            token: adoe-token-secret
+        clone-auth: &basic-creds
+            username: username-secret
+            password: password-secret
+        cxone: *cxone
+bbdc:
+    - service-name: BBDC-AsSSH
+        repo-match: .*SP
+        connection:
+        <<: *bbdc-con
+        api-auth: 
+            token: bbdc-ssh-proj-pat
+        clone-auth: *clone-ssh
+        cxone: *cxone
+    - service-name: BBDC-AsToken
+        repo-match: .*TOK
+        connection:
+        <<: *bbdc-con
+        api-auth:
+            token: bbdc-token-proj-pat
+        cxone: *cxone
+    - service-name: BBDC-AsBasicAuth
+        repo-match: .*BAS
+        connection:
+        <<: *bbdc-con
+        api-auth: *basic-creds
+        cxone: *cxone
+\end{code}
