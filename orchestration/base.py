@@ -59,6 +59,8 @@ class OrchestratorBase:
         commit_branch, commit_hash = await self._get_target_branch_and_hash()
         clone_url = self._repo_clone_url(scm_service.cloner)
 
+        cxone_project_name = await self.get_cxone_project_name()
+
         if clone_url is None:
             raise OrchestrationException("Clone URL could not be determined.")
 
@@ -71,7 +73,7 @@ class OrchestratorBase:
 
                 await scm_service.cloner.reset_head(code_path, commit_hash)
 
-                OrchestratorBase.log().info(f"{clone_url} clones in {perf_counter_ns() - check}ns")
+                OrchestratorBase.log().info(f"{clone_url} cloned in {perf_counter_ns() - check}ns")
                 check = perf_counter_ns()
 
                 with tempfile.NamedTemporaryFile(suffix='.zip') as zip_file:
@@ -92,7 +94,7 @@ class OrchestratorBase:
                     }
 
                     try:
-                        scan_submit = await cxone_service.execute_scan(zip_file.name, await self.get_cxone_project_name(), \
+                        scan_submit = await cxone_service.execute_scan(zip_file.name, cxone_project_name, \
                                                                         commit_branch, clone_url, scan_tags)
 
                         OrchestratorBase.log().debug(scan_submit)

@@ -13,7 +13,7 @@ class ScanInvoker:
 
         target_repo = await project_repo.repo_url
        
-        if not await project_repo.is_scm_imported:
+        if (not await project_repo.is_scm_imported) or (src_zip_path is not None) or (clone_cred_value is not None):
             submit_payload["project"] = {"id" : project_repo.project_id}
 
             if src_zip_path is not None:

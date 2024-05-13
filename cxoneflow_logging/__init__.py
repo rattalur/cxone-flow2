@@ -28,13 +28,13 @@ def bootstrap():
                     "formatter": "default",
                     "stream": "ext://sys.stdout"
                 },
-                "file": {
-                    "class": "logging.handlers.RotatingFileHandler",
-                    "formatter": "default",
-                    "filename": dest_file_path,
-                    "backupCount" : 10,
-                    "maxBytes" : 1024000000
-                }
+                # "file": {
+                #     "class": "logging.handlers.RotatingFileHandler",
+                #     "formatter": "default",
+                #     "filename": dest_file_path,
+                #     "backupCount" : 10,
+                #     "maxBytes" : 1024000000
+                # }
             },
             "formatters": {
                 "default": {

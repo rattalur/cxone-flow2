@@ -23,7 +23,7 @@ class Cloner:
         return urllib.parse.urlunsplit((split.scheme, new_netloc, split.path, split.query, split.fragment))
         
     @staticmethod
-    def using_basic_auth(username, password):
+    def using_basic_auth(username, password, in_header=False):
         Cloner.log().debug("Clone config: using_basic_auth")
 
         retval = Cloner()
@@ -33,26 +33,13 @@ class Cloner:
         retval.__username = username
         retval.__password = password
 
-        encoded_creds = base64.b64encode(f"{username}:{password}".encode('UTF8')).decode('UTF8')
-
-        retval.__clone_cmd_stub = ["git", "clone", "-c", f"http.extraHeader=Authorization: Basic {encoded_creds}"]
-        retval.__fix_clone_url = lambda url: url
-
-        return retval
-
-    @staticmethod
-    def using_url_creds(username, password):
-        Cloner.log().debug("Clone config: using_url_creds")
-
-        retval = Cloner()
-        retval.__protocol_matcher = Cloner.__https_matcher
-        retval.__supported_protocols = Cloner.__http_protocols
-        retval.__port = None
-        retval.__username = username
-        retval.__password = password
-
-        retval.__clone_cmd_stub = ["git", "clone"]
-        retval.__fix_clone_url = lambda url: Cloner.__insert_creds_in_url(url, username, password)
+        if not in_header:
+            retval.__clone_cmd_stub = ["git", "clone"]
+            retval.__fix_clone_url = lambda url: Cloner.__insert_creds_in_url(url, username, password)
+        else:
+            encoded_creds = base64.b64encode(f"{username}:{password}".encode('UTF8')).decode('UTF8')
+            retval.__clone_cmd_stub = ["git", "clone", "-c", f"http.extraHeader=Authorization: Basic {encoded_creds}"]
+            retval.__fix_clone_url = lambda url: url
 
         return retval
 

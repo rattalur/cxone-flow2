@@ -8,6 +8,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
     __route_urls_query = parse("$.repository.links.clone[*]")
     __repo_project_key_query = parse("$.repository.project.key")
+    __repo_project_name_query = parse("$.repository.project.name")
     __repo_slug_query = parse("$.repository.slug")
     __repo_name_query = parse("$.repository.name")
     __changes_extract_query = parse("$.changes[*]")
@@ -53,6 +54,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
     async def _execute_push_scan_workflow(self, cxone_service, scm_service):
         self.__repo_project_key = BitBucketDataCenterOrchestrator.__repo_project_key_query.find(self.__json)[0].value
+        self.__repo_project_name = BitBucketDataCenterOrchestrator.__repo_project_name_query.find(self.__json)[0].value
         self.__repo_slug = BitBucketDataCenterOrchestrator.__repo_slug_query.find(self.__json)[0].value
         self.__repo_name = BitBucketDataCenterOrchestrator.__repo_name_query.find(self.__json)[0].value
         
@@ -71,7 +73,6 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         return None
 
     async def _get_protected_branches(self, scm_service):
-        # return await scm_service.get_protected_branches(self._repo_project_key, self._repo_slug)
         retBranches = []
         model_resp = await scm_service.exec("GET", f"/rest/branch-utils/latest/projects/{self._repo_project_key}/repos/{self._repo_slug}/branchmodel")
 
@@ -100,8 +101,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
 
     async def get_cxone_project_name(self):
-        # TODO: Verify project key or full name is used in CxOne by SCM import to make it consistent.
-        return f"{self._repo_project_key}/{self._repo_name}"
+        return f"{self._repo_project_key}/{self.__repo_project_name}/{self._repo_name}"
 
     @property
     def _repo_project_key(self):
@@ -112,7 +112,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         return self.__repo_slug
 
     def _repo_clone_url(self, cloner):
-        return self.__clone_urls[cloner.select_protocol(self.__clone_urls.keys())]
+        return self.__clone_urls[cloner.select_protocol_from_supported(self.__clone_urls.keys())]
         
     @property
     def _repo_name(self):
