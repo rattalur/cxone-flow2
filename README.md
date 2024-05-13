@@ -28,9 +28,10 @@ before release.
 
 Currently, only the following features work:
 
-* BitBucket Data Center as an SCM
+* Supported SCMs
+    * BitBucket Data Center
+    * Azure DevOps Enterprise
 * Scans are invoked by Push events targetting protected branches.
-
 
 
 ## BitBucket Data Center Test Environment
@@ -55,6 +56,13 @@ products (like those used internally by Checkmarx) when you have logins cached i
 The current testing has been performed on BBDC 8.19.2.  What is needed is to regress at least one version of BBDC before 8.19 to see if it is also
 compatible.
 
+## Azure DevOps Enterprise Test Environment
+
+Azure DevOps Enterprise requires an installation on a Windows machine.  SQLExpress
+will also be required.  Membership in an Active Directory domain **is not** required. The  Express version can be downloaded from:
+https://learn.microsoft.com/en-us/azure/devops/server/download/azuredevopsserver?view=azure-devops
+
+
 ## Documentation
 
 If you read the documentation and it is not clear, please do the research needed to understand what would make it clear so the documentation can be fixed.
@@ -66,14 +74,35 @@ the `.tex` files with your updates, make sure you are on the title page as a con
 * You can alternately file a GitHub issue explaining the problem and what needs to change and the documentation will be updated when possible.
 
 
+## Tested
+
+ADOE currently requires no API access, so API auth has not been tested.
+
+* SSH Authentication for Clones
+    * ADOE
+    * BBDC
+* Basic Auth Authentication for Clones
+    * ADOE 
+    * BBDC
+* Basic Auth Authentication for API Access
+    * BBDC
+* Token Authentication for Clones
+    * ADOE 
+    * BBDC
+* Token Authentication for API Access
+    * BBDC
+
+* Submitting scans:
+    * Project creation if project does not exist.
+    * Use of existing project if project exists.
+    * Scans submitted to SCM-imported projects
+
+
 ## Testing Needs
 
-A single instance with a single SCM organization has been tested.  Some scenarios that have not been tested:
+Some scenarios that have not been tested:
 
 * Deploying with the CxOneFlow endpoint using SSL.
-* Configuration for multiple orgs emitting webhooks to the CxOneFlow endpoint.
-* Configuration for multiple SCM instances each having one or more orgs emitting webhooks to the CxOneFlow endpoint.
-* Multiple concurrent webhook payload deliveries invoking the CxOneFlow workflow.
 
 There will be bugs.
 
