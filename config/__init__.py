@@ -15,6 +15,10 @@ class ConfigurationException(Exception):
         return ConfigurationException(f"Missing key at path: {key_path}")
 
     @staticmethod
+    def secret_load_error(key_path):
+        return ConfigurationException(f"Could not load secret defined at: {key_path}")
+
+    @staticmethod
     def invalid_value (key_path):
         return ConfigurationException(f"The value configured at {key_path} is invalid")
 
@@ -108,7 +112,7 @@ class CxOneFlowConfig:
         retval = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(config_dict, key, None)
 
         if retval is None:
-            raise ConfigurationException.missing_key_path(f"{config_path}/{key}")
+            raise ConfigurationException.secret_load_error(f"{config_path}/{key}")
         
         return retval
 

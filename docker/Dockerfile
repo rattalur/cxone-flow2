@@ -48,6 +48,4 @@ COPY task_management /opt/cxone/task_management
 
 RUN chown root:nobody /etc/nginx/sites-enabled/*
 
-USER nobody
-
 ENTRYPOINT ["/opt/cxone/entrypoint.sh"]

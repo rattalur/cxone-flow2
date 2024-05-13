@@ -45,7 +45,7 @@ def bootstrap():
             "loggers": {
                 "root": {
                     "handlers": ["console"],
-                    "level": "DEBUG"
+                    "level": get_log_level()
                 }
             }
         }

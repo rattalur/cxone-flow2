@@ -8,7 +8,7 @@ from _agent import __agent__
 from flask import Flask, request, Response
 from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator, AzureDevOpsEnterpriseOrchestrator
 import json, logging, asyncio
-from config import CxOneFlowConfig
+from config import CxOneFlowConfig, ConfigurationException
 from time import perf_counter_ns
 from task_management import TaskManager
 import cxoneflow_logging as cof_logging
@@ -17,11 +17,14 @@ cof_logging.bootstrap()
 
 __app_name__ = __agent__
 
-
-
 __log = logging.getLogger(__app_name__)
 
-CxOneFlowConfig.bootstrap()
+try:
+    CxOneFlowConfig.bootstrap()
+except ConfigurationException as ce:
+    __log.exception(ce)
+    raise
+
 TaskManager.bootstrap()
 
 
