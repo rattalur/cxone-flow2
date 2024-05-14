@@ -80,7 +80,7 @@ class CxOneService:
 
         if int(projects_response['filteredTotalCount']) == 0:
             project_json = CxOneService.__get_json_or_fail (await self.__client.create_project( \
-                name=project_name, origin=__agent__, tags=self.__default_project_tags | {__agent__ : __version__, "service" : self.moniker}))
+                name=project_name, origin=__agent__, tags=self.__default_project_tags | {"cxone-flow" : __version__, "service" : self.moniker}))
             project_id = project_json['id']
         else:
             project_json = projects_response['projects'][0]
