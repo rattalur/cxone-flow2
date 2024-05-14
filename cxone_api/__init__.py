@@ -382,6 +382,10 @@ class CxOneClient:
         url = urljoin(self.api_endpoint, "scans")
         url = CxOneClient.__join_query_dict(url, kwargs)
         return await self.__exec_request(requests.get, url)
+
+    async def update_scan_tags(self, scan_id : str, payload : dict):
+        url = urljoin(self.api_endpoint, f"scans/{scan_id}/tags")
+        return await self.__exec_request(requests.put, url, json=payload)
     
     @dashargs("scan-ids")
     async def get_sast_scans_metadata(self, **kwargs):

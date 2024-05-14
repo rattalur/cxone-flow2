@@ -18,7 +18,8 @@
             "module": "flask",
             "env": {
                 "FLASK_APP": "wsgi.py",
-                "FLASK_DEBUG": "1"
+                "FLASK_DEBUG": "1",
+                "LOG_LEVEL" : "DEBUG"
             },
             "args": [
                 "run",
