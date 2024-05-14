@@ -1,0 +1,103 @@
+\chapter{Common Workflow Elements}
+
+Each source control system will use common Git concepts such as branching
+and pull-requests.  Scanning workflows are orchestrated based on these common concepts as
+described in Section \ref{sec:overview}.  
+
+Some source control systems will have uncommon capabilities that can be integrated into 
+the scan workflows.  Each section in this part of the manual describes any source control 
+system-specific capabilities integrated into the scanning workflow.  
+
+This section will describe common elements for each SCM that are integrated into the
+scanning workflow.
+
+\section{Created Project Naming}
+
+In the event a scan is executed and a matching project does not exist, a new project
+is created prior to the scan.  The project naming convention follows the same automatic
+naming convention that is used when importing projects into Checkmarx One using the 
+Code Repository Integration.
+
+\section{Project Tags}
+
+In addition to any configured default project tags, Table \ref{tab:project-tags} shows
+additional tags that are assigned to a project upon creation.
+
+\begin{table}[h]
+    \caption{Project Tags}  
+    \label{tab:project-tags}      
+    \begin{tabularx}{\textwidth}{ll}
+        \toprule
+        \textbf{Tag Name} & \textbf{Value} \\
+        \midrule
+        \texttt{service} & \makecell[l]{The configured service name, as described in Section \ref{sec:scm-block-element}, that 
+        \\handled the scan workflow based on the matching route.}\\
+        \midrule
+        \texttt{cxone-flow} & \makecell[l]{The version of \cxoneflow that handled the scan orchestration.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+\section{Push Scan Tags}
+
+When scan workflows are initiated by a "push" (e.g. a code commit to a protected branch),
+the scans are assigned the tags as described in Table \ref{tab:push-scan-tags}.  These
+tags are added in addition to any configured default scan tags.
+
+\begin{table}[h]
+    \caption{Push Scan Tags}  
+    \label{tab:push-scan-tags}      
+    \begin{tabularx}{\textwidth}{ll}
+        \toprule
+        \textbf{Tag Name} & \textbf{Value} \\
+        \midrule
+        \texttt{commit} & \makecell[l]{The commit hash for the push the invoked the scan.}\\
+        \midrule
+        \texttt{workflow} & \makecell[l]{Always set to \textbf{push}.}\\
+        \midrule
+        \texttt{service} & \makecell[l]{The configured service name, as described in Section \ref{sec:scm-block-element}, that 
+        \\handled the scan workflow based on the matching route.}\\
+        \midrule
+        \texttt{cxone-flow} & \makecell[l]{The version of \cxoneflow that handled the scan orchestration.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+\section{Pull-Request Scan Tags}
+
+Pull-Request scan tags have several tags with names matching those assigned by Push scan tags. 
+Pull-Requests may follow a workflow enforced by the source control system; the state of the
+Pull-Request workflow is captured in tags to the extent possible. It is not always possible
+to capture the Pull-Request state accurately given it may change during a period of time
+when it is not possible to update a scan's tags.  Table \ref{tab:pr-scan-tags} lists the
+tags that can be observed for scans invoked by a Pull-Request event.
+
+
+\begin{table}[h]
+    \caption{Pull-Request Scan Tags}  
+    \label{tab:pr-scan-tags}      
+    \begin{tabularx}{\textwidth}{ll}
+        \toprule
+        \textbf{Tag Name} & \textbf{Value} \\
+        \midrule
+        \texttt{commit} & \makecell[l]{The commit hash for the push the invoked the scan.}\\
+        \midrule
+        \texttt{workflow} & \makecell[l]{Always set to \textbf{pull-request}.}\\
+        \midrule
+        \texttt{service} & \makecell[l]{The configured service name, as described in Section \ref{sec:scm-block-element}, that 
+        \\handled the scan workflow based on the matching route.}\\
+        \midrule
+        \texttt{cxone-flow} & \makecell[l]{The version of \cxoneflow that handled the scan orchestration.}\\
+        \midrule
+        \texttt{pr-id} & \makecell[l]{The pull-request identifier that invoked the scan.}\\
+        \midrule
+        \texttt{pr-target} & \makecell[l]{The branch targeted by the pull-request.}\\
+        \midrule
+        \texttt{pr-status} & \makecell[l]{The review status of the pull-request.}\\
+        \midrule
+        \texttt{pr-state} & \makecell[l]{The state of the pull-request.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
