@@ -57,10 +57,10 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
 
     @property
-    def route_urls(self):
+    def route_urls(self) -> list:
         return self.__route_urls
 
-    async def is_signature_valid(self, shared_secret : str):
+    async def is_signature_valid(self, shared_secret : str) -> bool:
         sig = self.get_header_key_safe('X-Hub-Signature')
         if sig is None:
             return False
@@ -101,7 +101,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         
         return await OrchestratorBase._execute_push_scan_workflow(self, cxone_service, scm_service)
 
-    async def __is_pr_draft(self):
+    async def __is_pr_draft(self) -> bool:
         return bool(BitBucketDataCenterOrchestrator.__pr_draft_query.find(self.__json)[0].value)
     
     def __populate_common_pr_data(self):
@@ -145,13 +145,13 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         return await OrchestratorBase._execute_pr_tag_update_workflow(self, cxone_service, scm_service)
 
 
-    async def _get_target_branch_and_hash(self):
+    async def _get_target_branch_and_hash(self) -> tuple:
         return self.__target_branch, self.__target_hash
 
-    async def _get_source_branch_and_hash(self):
+    async def _get_source_branch_and_hash(self) -> tuple:
         return self.__source_branch, self.__source_hash
 
-    async def _get_protected_branches(self, scm_service : SCMService):
+    async def _get_protected_branches(self, scm_service : SCMService) -> list:
         retBranches = []
         model_resp = await scm_service.exec("GET", f"/rest/branch-utils/latest/projects/{self._repo_project_key}/repos/{self._repo_slug}/branchmodel")
 
@@ -168,7 +168,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         
         return list(set(retBranches))
 
-    async def _get_default_branch(self, project : str, slug : str):
+    async def _get_default_branch(self, project : str, slug : str) -> str:
         default_resp = await self.exec("GET", f"/rest/api/latest/projects/{project}/repos/{slug}/default-branch")
 
         if not default_resp.ok:
@@ -179,38 +179,38 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         return json['displayId'] if "displayId" in json.keys() else ""
 
 
-    async def get_cxone_project_name(self):
+    async def get_cxone_project_name(self) -> str:
         return f"{self._repo_project_key}/{self.__repo_project_name}/{self._repo_name}"
 
     @property
-    def _pr_state(self):
+    def _pr_state(self) -> str:
         return self.__pr_state
 
     @property
-    def _pr_status(self):
+    def _pr_status(self) -> str:
         return self.__pr_status
 
     @property
-    def _pr_id(self):
+    def _pr_id(self) -> str:
         return self.__pr_id
 
     @property
-    def _repo_project_key(self):
+    def _repo_project_key(self) -> str:
         return self.__repo_project_key
 
     @property
-    def _repo_slug(self):
+    def _repo_slug(self) -> str:
         return self.__repo_slug
 
-    def _repo_clone_url(self, cloner):
+    def _repo_clone_url(self, cloner) -> str:
         return self.__clone_urls[cloner.select_protocol_from_supported(self.__clone_urls.keys())]
         
     @property
-    def _repo_name(self):
+    def _repo_name(self) -> str:
         return self.__repo_name
         
     @property
-    def is_diagnostic(self):
+    def is_diagnostic(self) -> bool:
         return self.__isdiagnostic
 
     __workflow_map = {

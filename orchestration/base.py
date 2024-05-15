@@ -10,7 +10,7 @@ class OrchestratorBase:
 
 
     @staticmethod
-    def log():
+    def log() -> logging.Logger:
         return logging.getLogger("OrchestratorBase")
 
     def __init__(self, headers, webhook_payload):
@@ -18,19 +18,19 @@ class OrchestratorBase:
         self.__headers = headers
 
     @property
-    def _headers(self):
+    def _headers(self) -> dict:
         return self.__headers
 
     @property
-    def route_urls(self):
+    def route_urls(self) -> list:
         raise NotImplementedError("route_urls")
 
     @property
-    def _webhook_payload(self):
+    def _webhook_payload(self) -> str:
         return self.__webhook_payload
     
     @staticmethod
-    def __get_path_dict(path, root=None):
+    def __get_path_dict(path : str, root : str = None) -> dict:
         return_dict = {}
 
         use_root = path if root is None else root
@@ -152,51 +152,51 @@ class OrchestratorBase:
         return updated_scans
 
     
-    async def _get_target_branch_and_hash(self):
+    async def _get_target_branch_and_hash(self) -> tuple:
         raise NotImplementedError("_get_target_branch_and_hash")
 
-    async def _get_source_branch_and_hash(self):
+    async def _get_source_branch_and_hash(self) -> tuple:
         raise NotImplementedError("_get_source_branch_and_hash")
 
-    async def _get_protected_branches(self, scm_service : SCMService):
+    async def _get_protected_branches(self, scm_service : SCMService) -> list:
         raise NotImplementedError("_get_protected_branches")
 
-    async def is_signature_valid(self, shared_secret : str):
+    async def is_signature_valid(self, shared_secret : str) -> bool:
         raise NotImplementedError("is_signature_valid")
     
-    async def get_cxone_project_name(self):
+    async def get_cxone_project_name(self) -> str:
         raise NotImplementedError("get_cxone_project_name")
 
 
     @property
-    def _pr_state(self):
+    def _pr_state(self) -> str:
         raise NotImplementedError("_pr_state")
 
     @property
-    def _pr_status(self):
+    def _pr_status(self) -> str:
         raise NotImplementedError("_pr_status")
 
     @property
-    def _pr_id(self):
+    def _pr_id(self) -> str:
         raise NotImplementedError("_pr_id")
     
     @property
-    def _repo_project_key(self):
+    def _repo_project_key(self) -> str:
         raise NotImplementedError("_repo_project_key")
 
     @property
-    def _repo_slug(self):
+    def _repo_slug(self) -> str:
         raise NotImplementedError("_repo_slug")
 
-    def _repo_clone_url(self, cloner : Cloner):
+    def _repo_clone_url(self, cloner : Cloner) -> str:
         raise NotImplementedError("_repo_clone_uri")
 
     @property
-    def _repo_name(self):
+    def _repo_name(self) -> str:
         raise NotImplementedError("_repo_name")
     
     @property
-    def is_diagnostic(self):
+    def is_diagnostic(self) -> bool:
         raise NotImplementedError("is_diagnostic")
     
 
