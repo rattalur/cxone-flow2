@@ -94,7 +94,7 @@ class OrchestratorBase:
                                                                         source_branch, clone_url, tags)
 
                         OrchestratorBase.log().debug(scan_submit)
-                        OrchestratorBase.log().info(f"Scan id {scan_submit['id']} created for {clone_url}:{source_branch}@{source_hash}")
+                        OrchestratorBase.log().info(f"Scan id {scan_submit['id']} created for {clone_url}|{source_branch}|{source_hash}")
 
                         return scan_submit
                     except Exception as ex:

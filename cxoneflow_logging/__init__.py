@@ -1,4 +1,16 @@
-import logging, logging.config, json, os, pathlib
+import logging, logging.config, json, os, pathlib, re
+
+class RedactingStreamHandler(logging.StreamHandler):
+     
+    __secret_matcher = re.compile("Authorization: .+ (?P<header>.*)$|http[s]?://(?P<url>.*?:.*?)@", re.RegexFlag.I | re.RegexFlag.M)
+
+    def format(self, record):
+        msg = super().format(record)
+        for secret in RedactingStreamHandler.__secret_matcher.finditer(msg):
+            for m in secret.groupdict().keys():
+                msg = msg[0:secret.start(m)] + ('*' * (secret.end(m) - secret.start(m))) + msg[secret.end(m):]
+        
+        return msg
 
 
 def get_log_level():
@@ -24,7 +36,7 @@ def bootstrap():
             "version": 1,
             "handlers": {
                 "console": {
-                    "class": "logging.StreamHandler",
+                    "class": "cxoneflow_logging.RedactingStreamHandler",
                     "formatter": "default",
                     "stream": "ext://sys.stdout"
                 },
