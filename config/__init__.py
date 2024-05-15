@@ -3,8 +3,13 @@ from _agent import __agent__
 from pathlib import Path
 import re
 import yaml, logging, cxone_api as cx, os
-from scm_services import bitbucketdc_cloner_factory, adoe_cloner_factory, SCMService
-from api_utils import auth_bearer, auth_basic, APISession
+from scm_services import \
+    bitbucketdc_cloner_factory, \
+    adoe_cloner_factory, \
+    adoe_api_auth_factory, \
+    bbdc_api_auth_factory, \
+    SCMService
+from api_utils import APISession
 from cxone_service import CxOneService
 from password_strength import PasswordPolicy
 
@@ -86,7 +91,7 @@ class CxOneFlowConfig:
             if scm in CxOneFlowConfig.__raw.keys():
                 index = 0
                 for repo_config_dict in CxOneFlowConfig.__raw[scm]:
-                    CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__cloner_factories[scm], repo_config_dict, f"/{scm}[{index}]")
+                    CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__cloner_factories[scm], CxOneFlowConfig.__auth_factories[scm], repo_config_dict, f"/{scm}[{index}]")
                     index += 1
 
     @staticmethod
@@ -196,19 +201,14 @@ class CxOneFlowConfig:
     __all_possible_clone_auth_keys = list(set(__minimum_clone_auth_keys + __basic_auth_keys + ['ssh-port']))
 
     @staticmethod
-    def __scm_api_auth_factory(config_dict, config_path):
+    def __scm_api_auth_factory(api_auth_factory, config_dict, config_path):
 
         CxOneFlowConfig.__validate_no_extra_auth_keys(config_dict, CxOneFlowConfig.__all_possible_api_auth_keys, config_path)
         
-        auth_type_keys = CxOneFlowConfig.__validate_minimum_auth_keys(config_dict, CxOneFlowConfig.__minimum_api_auth_keys, config_path)
-        
-        if len([x for x in config_dict.keys() if x in CxOneFlowConfig.__basic_auth_keys]) == len(CxOneFlowConfig.__basic_auth_keys):
-            return auth_basic( \
-                CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(config_path, 'username', config_dict), \
-                CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(config_path, 'password', config_dict) )
-
-        if 'token' in auth_type_keys:
-            return auth_bearer(CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(config_path, 'token', config_dict))
+        if len(CxOneFlowConfig.__validate_minimum_auth_keys(config_dict, CxOneFlowConfig.__minimum_api_auth_keys, config_path)) > 0:
+            return api_auth_factory(CxOneFlowConfig.__get_secret_from_value_of_key_or_default(config_dict, "username", None),
+                                    CxOneFlowConfig.__get_secret_from_value_of_key_or_default(config_dict, "password", None),
+                                    CxOneFlowConfig.__get_secret_from_value_of_key_or_default(config_dict, "token", None))
 
         raise ConfigurationException(f"{config_path} SCM API authorization configuration is invalid!")
 
@@ -249,7 +249,7 @@ class CxOneFlowConfig:
         return retval
 
     @staticmethod
-    def __setup_scm(cloner_factory, config_dict, config_path):
+    def __setup_scm(cloner_factory, api_auth_factory, config_dict, config_path):
         repo_matcher = re.compile(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'repo-match', config_dict), re.IGNORECASE)
 
         service_moniker = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'service-name', config_dict)
@@ -271,7 +271,7 @@ class CxOneFlowConfig:
         api_auth_dict = CxOneFlowConfig.__get_value_for_key_or_fail(f"{config_path}/connection", 'api-auth', connection_config_dict)
 
         api_session = APISession(CxOneFlowConfig.__get_value_for_key_or_fail(f"{config_path}/connection", 'base-url', connection_config_dict), \
-                                 CxOneFlowConfig.__scm_api_auth_factory(api_auth_dict, f"{config_path}/connection/api-auth"), \
+                                 CxOneFlowConfig.__scm_api_auth_factory(api_auth_factory, api_auth_dict, f"{config_path}/connection/api-auth"), \
                                  CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', connection_config_dict, 60), \
                                  CxOneFlowConfig.__get_value_for_key_or_default('retries', connection_config_dict, 3), \
                                  CxOneFlowConfig.__get_value_for_key_or_default('proxies', connection_config_dict, None), \
@@ -298,6 +298,9 @@ class CxOneFlowConfig:
         'bbdc' : bitbucketdc_cloner_factory,
         'adoe' : adoe_cloner_factory }
 
+    __auth_factories = {
+        'bbdc' : bbdc_api_auth_factory,
+        'adoe' : adoe_api_auth_factory }
         
 
         

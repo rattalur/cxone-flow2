@@ -13,7 +13,7 @@ class SCMService:
 
     @staticmethod
     def log():
-        return logging.getLogger(__name__)
+        return logging.getLogger("SCMService")
 
     def __init__(self, moniker, api_session, shared_secret, cloner):
         self.__session = api_session
@@ -69,12 +69,7 @@ class SCMService:
                                                 data=body, \
                                                 auth=self.__session.auth, \
                                                 headers = extra_headers))
-    
-    async def get_protected_branches(self, project, slug):
-        raise NotImplementedError("get_protected_branches")
-
-    async def get_default_branch(self, project, slug):
-        raise NotImplementedError("get_default_branch")
+   
    
 
 

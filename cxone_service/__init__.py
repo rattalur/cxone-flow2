@@ -74,7 +74,7 @@ class CxOneService:
         return scans_updated
 
 
-    async def execute_scan(self, zip_path, project_name, commit_branch, repo_url, scan_tags={}):
+    async def execute_scan(self, zip_path : str, project_name : str, commit_branch : str, repo_url : str, scan_tags : dict ={}):
 
         projects_response = CxOneService.__get_json_or_fail (await self.__client.get_projects(name=project_name))
 
@@ -112,4 +112,14 @@ class CxOneService:
 
         return CxOneService.__get_json_or_fail(await ScanInvoker.scan_get_response(self.__client, 
                 project_config, commit_branch, engines, scan_tags | self.__default_scan_tags, zip_path))
-   
+
+
+    async def find_pr_scans(self, by_project_name : str, by_pr_id : str, by_commit_hash : str) -> list:
+        found_scans = []
+
+        async for scan in paged_api(self.__client.get_scans, "scans", 
+                                    project_names=by_project_name, tags_keys = CxOneService.COMMIT_TAG, tags_values=by_commit_hash):
+            if CxOneService.PR_ID_TAG in scan['tags'] and str(scan['tags'][CxOneService.PR_ID_TAG]) == by_pr_id:
+                found_scans.append(scan['id'])
+
+        return found_scans
