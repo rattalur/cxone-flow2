@@ -183,7 +183,7 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         -10 : "REJECTED",
         -5 : "WAIT_AUTHOR",
         0 : "NO_REVIEW",
-        5 : "TENATIVE_APPROVAL",
+        5 : "APPROVED_COMMENTS",
         10 : "APPROVED"
     }
 
