@@ -10,6 +10,24 @@ compatible with the cloud-hosted version of Azure DevOps.
 \noindent\\The \cxoneflow endpoint \texttt{/adoe} is the handler for all webhook event
 payloads originating from Azure DevOps Enterprise.  
 
+\section{Configuration Notes}
+
+When configuring the \texttt{base-url} for the Azure DevOps Enterprise connection configuration,
+as described in Section \ref{sec:connection-element}, the \texttt{base-url} should include
+the collection.  Some organizations only have the collection named \texttt{DefaultCollection},
+but it is possible to have multiple different collections. 
+
+If your organization's Azure DevOps Enterprise system has a single collection containing 
+multiple projects, a single Azure DevOps Enterprise connection can be used for all projects.
+A single connection configuration assumes that the user account configured with 
+the \texttt{api-auth} and/or \texttt{clone-auth} elements has been granted committer
+access to each project in the collection.
+
+If your organization's Azure DevOps Enterprise system has multiple collections that will
+use \cxoneflow to orchestrate scans, a separate connection configuration will be required
+for each collection.  The \texttt{repo-match} configuration element, described in
+Section \ref{sec:scm-block-element} should also include the collection name as part of the
+match criteria.
 
 \section{Webhook Configuration}
 
@@ -55,12 +73,12 @@ are showing messages indicating webhook events are being rejected, checking that
 shared secret matches in both the Azure DevOps Enterprise service hook and \cxoneflow
 configurations.
 
-Additional service hook configurations should be created for the following triggers:
+A complete configuration should emit web hook payloads on the following events:
 
 \begin{itemize}
+    \item Code pushed
     \item Pull request created
     \item Pull request updated
-    \item Pull request merge attempted
 \end{itemize}
 
 \begin{figure}[h]
