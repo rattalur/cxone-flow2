@@ -32,16 +32,13 @@ RUN apt-get update && \
     rm /etc/nginx/sites-enabled/default
 
 
-RUN usermod -s /bin/bash nobody && \
-    groupadd nobody && \
-    usermod -G nobody nobody && \
-    mkdir -p /opt/cxone && \
+RUN mkdir -p /opt/cxone && \
     mkdir -p /var/log/gunicorn && \
     mkdir -p /var/log/cxoneflow && \
     mkdir -p /var/log/nginx && \
-    chown root:nobody /var/log/gunicorn && \
+    chown root:root /var/log/gunicorn && \
     chmod 775 /var/log/gunicorn && \
-    chown root:nobody /var/log/cxoneflow && \
+    chown root:root /var/log/cxoneflow && \
     chmod 775 /var/log/cxoneflow
 
 
