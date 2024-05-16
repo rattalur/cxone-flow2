@@ -1,12 +1,34 @@
 import logging, logging.config, json, os, pathlib, re
+from threading import Lock
+
+class SecretRegistry:
+     __lock = Lock()
+     __default_regex = "Authorization: .+ (?P<header>.*)$"
+     __compiled_regex = re.compile(__default_regex,  re.RegexFlag.I | re.RegexFlag.M)
+     __secrets = []
+     
+     @staticmethod
+     def register(secret : str) -> str:
+        if secret is not None:
+            with SecretRegistry.__lock:
+                if not secret in SecretRegistry.__secrets:
+                    SecretRegistry.__secrets.append(re.escape(secret.replace("\n", "").replace("\r", "")))
+                    SecretRegistry.__compiled_regex = re.compile(f"{SecretRegistry.__default_regex}|(?P<any>{'|'.join(SecretRegistry.__secrets)})", \
+                                                                 re.RegexFlag.I | re.RegexFlag.M)
+        return secret
+          
+     
+     @staticmethod
+     def get_match_iter(logmsg : str) -> re.Match:
+          with SecretRegistry.__lock:
+              return SecretRegistry.__compiled_regex.finditer(logmsg)
+
 
 class RedactingStreamHandler(logging.StreamHandler):
      
-    __secret_matcher = re.compile("Authorization: .+ (?P<header>.*)$|http[s]?://(?P<url>.*?:.*?)@", re.RegexFlag.I | re.RegexFlag.M)
-
     def format(self, record):
         msg = super().format(record)
-        for secret in RedactingStreamHandler.__secret_matcher.finditer(msg):
+        for secret in SecretRegistry.get_match_iter(msg):
             for m in secret.groupdict().keys():
                 msg = msg[0:secret.start(m)] + ('*' * (secret.end(m) - secret.start(m))) + msg[secret.end(m):]
         

@@ -1,5 +1,5 @@
 import os, tempfile, shutil, shlex, subprocess, asyncio, logging, urllib, base64, re
-
+from cxoneflow_logging import SecretRegistry
 
 class Cloner:
 
@@ -19,7 +19,7 @@ class Cloner:
     @staticmethod
     def __insert_creds_in_url(url, username, password):
         split = urllib.parse.urlsplit(url)
-        new_netloc = f"{urllib.parse.quote(username, safe='') if username is not None else 'git'}:{urllib.parse.quote(password, safe='')}@{split.netloc}"
+        new_netloc = f"{urllib.parse.quote(username, safe='') if username is not None else 'git'}:{SecretRegistry.register(urllib.parse.quote(password, safe=''))}@{split.netloc}"
         return urllib.parse.urlunsplit((split.scheme, new_netloc, split.path, split.query, split.fragment))
         
     @staticmethod
@@ -31,7 +31,7 @@ class Cloner:
         retval.__supported_protocols = Cloner.__http_protocols
         retval.__port = None
         retval.__username = username
-        retval.__password = password
+        retval.__password = SecretRegistry.register(password)
 
         if not in_header:
             retval.__clone_cmd_stub = ["git", "clone"]
@@ -96,10 +96,10 @@ class Cloner:
         Cloner.log().debug(f"Clone Execution for: {clone_url}")
 
         fixed_clone_url = self.__fix_clone_url(clone_url)
-
         clone_output_loc = tempfile.TemporaryDirectory(delete=False)
-        thread = asyncio.to_thread(subprocess.run, self.__clone_cmd_stub + [fixed_clone_url, clone_output_loc.name], \
-                                   capture_output=True, env=self.__env, check=True)
+        cmd = self.__clone_cmd_stub + [fixed_clone_url, clone_output_loc.name]
+        Cloner.log().debug(cmd)
+        thread = asyncio.to_thread(subprocess.run, cmd, capture_output=True, env=self.__env, check=True)
         
         return Cloner.__clone_worker(thread, clone_output_loc)
 

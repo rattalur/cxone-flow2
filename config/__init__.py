@@ -12,6 +12,7 @@ from scm_services import \
 from api_utils import APISession
 from cxone_service import CxOneService
 from password_strength import PasswordPolicy
+from cxoneflow_logging import SecretRegistry
 
 class ConfigurationException(Exception):
 
@@ -73,26 +74,31 @@ class CxOneFlowConfig:
     @staticmethod
     def bootstrap(config_file_path = "./config.yaml"):
 
-        CxOneFlowConfig.log().info(f"Loading configuration from {config_file_path}")
+        try:
+            CxOneFlowConfig.log().info(f"Loading configuration from {config_file_path}")
 
-        with open(config_file_path, "rt") as cfg:
-            CxOneFlowConfig.__raw = yaml.safe_load(cfg)
+            with open(config_file_path, "rt") as cfg:
+                CxOneFlowConfig.__raw = yaml.safe_load(cfg)
 
-        if not "secret-root-path" in CxOneFlowConfig.__raw.keys():
-            raise ConfigurationException.missing_key_path("/secret-root-path")
-        else:
-            CxOneFlowConfig.__secret_root = CxOneFlowConfig.__raw['secret-root-path']
+            if not "secret-root-path" in CxOneFlowConfig.__raw.keys():
+                raise ConfigurationException.missing_key_path("/secret-root-path")
+            else:
+                CxOneFlowConfig.__secret_root = CxOneFlowConfig.__raw['secret-root-path']
 
-        if len(CxOneFlowConfig.__raw.keys() - CxOneFlowConfig.__cloner_factories.keys()) == len(CxOneFlowConfig.__raw.keys()):
-            raise ConfigurationException.missing_at_least_one_key_path("/", CxOneFlowConfig.__cloner_factories.keys())
-        
-        for scm in CxOneFlowConfig.__cloner_factories.keys():
+            if len(CxOneFlowConfig.__raw.keys() - CxOneFlowConfig.__cloner_factories.keys()) == len(CxOneFlowConfig.__raw.keys()):
+                raise ConfigurationException.missing_at_least_one_key_path("/", CxOneFlowConfig.__cloner_factories.keys())
+            
+            for scm in CxOneFlowConfig.__cloner_factories.keys():
 
-            if scm in CxOneFlowConfig.__raw.keys():
-                index = 0
-                for repo_config_dict in CxOneFlowConfig.__raw[scm]:
-                    CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__cloner_factories[scm], CxOneFlowConfig.__auth_factories[scm], repo_config_dict, f"/{scm}[{index}]")
-                    index += 1
+                if scm in CxOneFlowConfig.__raw.keys():
+                    index = 0
+                    for repo_config_dict in CxOneFlowConfig.__raw[scm]:
+                        CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__cloner_factories[scm], CxOneFlowConfig.__auth_factories[scm], repo_config_dict, f"/{scm}[{index}]")
+                        index += 1
+        except Exception as ex:
+            CxOneFlowConfig.log().exception(ex)
+            raise
+    
 
     @staticmethod
     def __get_value_for_key_or_fail(config_path, key, config_dict):
@@ -104,13 +110,13 @@ class CxOneFlowConfig:
     @staticmethod
     def __get_secret_from_value_of_key_or_default(config_dict, key, default):
         if not key in config_dict.keys():
-            return default
+            return SecretRegistry.register(default)
         else:
             if not os.path.isfile(Path(CxOneFlowConfig.__secret_root) / Path(config_dict[key])):
-                return default
+                return SecretRegistry.register(default)
             else:
                 with open(Path(CxOneFlowConfig.__secret_root) / Path(config_dict[key]), "rt") as secret:
-                    return secret.readline().strip()
+                    return SecretRegistry.register(secret.readline().strip())
 
     @staticmethod
     def __get_secret_from_value_of_key_or_fail(config_path, key, config_dict):
