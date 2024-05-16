@@ -3,7 +3,11 @@
 update-ca-certificates
 export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
-[ ! -n "$CXONEFLOW_HOSTNAME" ] && export CXONEFLOW_HOSTNAME=localhost
+for f in $(ls /opt/cxone/nginx);
+do
+    cat /opt/cxone/nginx/$f | envsubst '$SSL_CERT_PATH $SSL_CERT_KEY_PATH $CXONEFLOW_HOSTNAME' > /etc/nginx/sites-enabled/$f
+done
+
 
 nginx
 

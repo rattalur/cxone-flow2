@@ -1,11 +1,11 @@
   server {
-#    listen 8443 default_server ssl;
-#    server_name ${CXONEFLOW_HOSTNAME};
-#    access_log /var/log/nginx/access.log;
+   listen 8443 default_server ssl;
+   server_name $CXONEFLOW_HOSTNAME;
+   access_log /var/log/nginx/access.log;
 
-#    ssl_certificate         ${SSL_CERT_PATH};
-#    ssl_certificate_key     ${SSL_CERT_KEY_PATH};
-#    ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+   ssl_certificate         "$SSL_CERT_PATH";
+   ssl_certificate_key     "$SSL_CERT_KEY_PATH";
+   ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
 
 
 

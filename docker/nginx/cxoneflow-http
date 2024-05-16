@@ -1,6 +1,6 @@
   server {
     listen 8000 default_server;
-    server_name ${CXONEFLOW_HOSTNAME};
+    server_name $CXONEFLOW_HOSTNAME;
     access_log /var/log/nginx/access.log;
 
 
