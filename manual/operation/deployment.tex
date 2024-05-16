@@ -29,21 +29,28 @@ docker run \
 
 \noindent\\This executes the container with your defined \texttt{config.yml}, mapping a local directory
 containing secrets files to \texttt{/run/secrets}, and exposing port 8000 locally for receipt of 
-webhook payloads.
+unencrypted webhook payloads.
+
+
 
 
 \section{Deployment Considerations}
 
 The \cxoneflow container is stateless, listens on port 8000 for unencrypted webhook event delivery, 
 and listens on port 8443 for encrypted webhook event delivery.  It is possible to map port 80 and 443
-externally to the internal container ports.
+externally to the internal container ports.  A default self-signed SSL certificate will be used
+for encrypted traffic via port 8443 unless a custom SSL certificate configuration is provided.  
 
 The number of CPU cores on the host where the container is executing may be over-allocated to other
 containers or processes.  Having the container use a high number of worker processes for an over-allocated
-host will make the performance worse.  It is suggested that the \cxoneflow instances are scaled
-to run on different physical hosts to ensure availability.  This will mean you'll need to place the
-\cxoneflow host endpoints behind a load balancer.  The \cxoneflow endpoint \texttt{/ping} is available
-for monitoring each running instance to ensure it is alive.
+host will degrade performance.  The operation of \cxoneflow is not computationally intense
+but it does perform rapid network and disk I/O when cloning source code and communicating with
+remote system APIs.
+
+It is suggested that the \cxoneflow instances are scaled to run on different physical hosts to
+ensure availability.  This will mean you'll need to place the \cxoneflow host endpoints behind 
+a load balancer.  The \cxoneflow endpoint \texttt{/ping} is available for monitoring each
+running instance to ensure it is alive.
 
 
 
