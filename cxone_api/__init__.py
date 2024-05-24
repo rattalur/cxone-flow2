@@ -275,7 +275,7 @@ class CxOneClient:
             if response.ok:
                 return response.json()
         
-        raise AuthException(response.reason if not response is None else "Unknown error")
+        raise AuthException(f"CheckmarxOne response: {response.reason if not response is None else 'Unknown error'}")
 
     async def __do_auth(self):
         skip = False

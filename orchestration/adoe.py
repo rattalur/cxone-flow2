@@ -5,6 +5,7 @@ from cxone_api.util import CloneUrlParser
 import logging
 from cxone_service import CxOneService
 from scm_services import SCMService, Cloner
+from pathlib import Path
 
 
 class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
@@ -16,6 +17,7 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
     __repo_slug_query = parse("$.resource.repository.name")
     __payload_type_query = parse("$.eventType")
     __repository_id_query = parse("$.resource.repository.id")
+    __collection_url_query = parse("$.resourceContainers.collection.baseUrl")
     
     __push_default_branch_query = parse("$.resource.repository.defaultBranch")
     __push_target_branch_query = parse("$.resource.refUpdates..name")
@@ -53,6 +55,9 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         self.__default_branches = [AzureDevOpsEnterpriseOrchestrator.__normalize_branch_name(x.value) for x in list(self.__push_default_branch_query.find(self.__json))]
         self.__repo_key = [x.value for x in list(self.__repo_project_key_query.find(self.__json))][0]
         self.__repo_slug = [x.value for x in list(self.__repo_slug_query.find(self.__json))][0]
+        self.__collection_url = [x.value for x in list(self.__collection_url_query.find(self.__json))][0]
+        self.__collection = Path(urllib.parse.urlparse(self.__collection_url).path).name
+
 
     async def execute(self, cxone_service, scm_service):
         return await AzureDevOpsEnterpriseOrchestrator.__workflow_map[self.__event](self, cxone_service, scm_service)
@@ -149,7 +154,7 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
             # This is a scan tag update, not a scan.
             return await OrchestratorBase._execute_pr_tag_update_workflow(self, cxone_service, scm_service)
         else:
-            repo_details = await scm_service.exec("GET", f"{self._repo_project_key}/_apis/git/repositories/{self.__repository_id}")
+            repo_details = await scm_service.exec("GET", f"{self.__collection}/{self._repo_project_key}/_apis/git/repositories/{self.__repository_id}")
 
             if not repo_details.ok:
                 AzureDevOpsEnterpriseOrchestrator.log().error(f"Response [{repo_details.status_code}] to request for repository details, event handling aborted.")
