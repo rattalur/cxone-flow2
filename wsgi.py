@@ -7,7 +7,7 @@ that is compatible with other methods of deployment.
 from _agent import __agent__
 from flask import Flask, request, Response
 from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator, AzureDevOpsEnterpriseOrchestrator
-import json, logging, asyncio
+import json, logging, asyncio, os
 from config import CxOneFlowConfig, ConfigurationException
 from time import perf_counter_ns
 from task_management import TaskManager
@@ -19,8 +19,14 @@ __app_name__ = __agent__
 
 __log = logging.getLogger(__app_name__)
 
+def get_config_path():
+    if "CONFIG_YAML_PATH" in os.environ.keys():
+        return os.environ['CONFIG_YAML_PATH']
+    else:
+        return "./config.yaml"
+
 try:
-    CxOneFlowConfig.bootstrap()
+    CxOneFlowConfig.bootstrap(get_config_path())
 except ConfigurationException as ce:
     __log.exception(ce)
     raise
