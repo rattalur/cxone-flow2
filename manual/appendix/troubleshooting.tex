@@ -1,0 +1,25 @@
+\chapter{Troubleshooting}
+
+If \cxoneflow does not appear to be operating as expected, the following
+troubleshooting steps may help to understand the reason:
+
+\begin{itemize}
+    \item The environment variable \texttt{LOG\_LEVEL} can be set to \texttt{DEBUG}
+    to emit trace information as \cxoneflow is running.
+
+    \item Navigate to the \texttt{ping} endpoint in your browser to see the 
+    \texttt{pong} response using: \texttt{http://<server>/ping}
+    
+    \item The \cxoneflow logs are streamed to the container's stdout.  It can be
+    viewed by running the container interactively or using a command such as
+    \texttt{docker logs -f <container name>}
+
+    \item Nginx and Gunicorn logs can be found in \texttt{/var/log} on the container
+    image.  A shell on the container can be opened using a command such as
+    \texttt{docker exec -it <container name> bash}
+
+\end{itemize}
+
+\noindent\\Exception stack traces emitted in the \cxoneflow logs can generally
+indicate any issues it is encountering.  Many issues are likely to be configuration
+related.

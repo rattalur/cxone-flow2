@@ -1,0 +1,93 @@
+\chapter{Running \cxoneflow as a \texttt{systemd} Service}
+
+
+Running \cxoneflow as a \texttt{systemd} service on Linux is one method that
+will allow the container to be started automatically when the hosting system
+is rebooted.  The \texttt{systemd} service can then be used to start and stop the
+\cxoneflow services.  This section details an example configuration that can be adapted
+to your environment.
+
+
+\section{Obtain and Store Files}
+
+In the directory \texttt{/opt/cxoneflow}, collect the configuration YAML, PEM encoded SSL certificate, PEM encoded SSL certificate private key,
+and any secret\footnote{If planning to map secrets to the container using other methods, 
+writing the files is not required.} files referenced in the configuration YAML.  The following
+ownership and permissions files are suggested:
+
+\begin{itemize}
+    \item Set the ownership to \texttt{root:docker} with the command \texttt{chown -R root:docker /opt/cxoneflow}
+    \item Set the permissions of \texttt{/opt/cxoneflow} using the command \texttt{chmod 750 /opt/cxoneflow}
+    \item Set the permissions of the files in \texttt{/opt/cxoneflow} using the command
+    \texttt{chmod -R 740 /opt/cxoneflow/*}
+\end{itemize}
+
+
+\section{Container Creation}
+
+Creating a reusable container with the name \textbf{cxoneflow} can be done with the following
+command:
+
+\begin{code}{Container Creation Command}{}{}
+docker create --rm --name "cxoneflow" -p 443:8443 --env-file runtime.env \
+  -v /path/to/cert.pem:/opt/cxone/certs/mycert.pem \
+  -v /path/to/private.key.pem:/opt/cxone/certs/my.private.key.pem \
+  -v /path/to/config.yaml:/opt/cxone/config.yaml \
+  -v /path/to/secrets:/run/secrets \
+  ghcr.io/checkmarx-ts/cxone/cxone-flow:latest
+\end{code}
+
+\noindent\\The command creates a container with the following properties:
+
+\begin{itemize}
+    \item The container with the name \textbf{cxoneflow} is created.
+    \item The \texttt{----rm} automatically removes the container named \textbf{cxoneflow} if
+    it exists.
+    \item Port 443 is mapped to port 8443 of the container to support secure communication with
+    the \cxoneflow endpoint.
+    \item Runtime environment variables (as described in Section \ref{sec:runtime-config}) 
+    located in the file \texttt{runtime.env} are injected into the container's environment.
+    \item Maps the following files from the local \texttt{/path/to/} path to files for the SSL
+    certificate, configuration YAML, and secrets
+    \footnote{This is assuming the secrets are not already mapped to the container using other methods.}.
+\end{itemize}
+
+\noindent\\It is suggested that the command is incorporated into a shell script so it may be
+invoked to recreate the container during a version upgrade.
+
+\section{Service Definition}
+
+A \texttt{systemd} service definition should be created using a file named, for example,
+\\\texttt{/opt/cxoneflow/cxoneflow.service}.  The service definition should have contents
+similar to the following:
+
+\begin{code}{/opt/cxoneflow/cxoneflow.service}{}{}
+[Unit]
+Description=CxOneFlow container
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker start -a cxoneflow
+ExecStop=/usr/bin/docker stop cxoneflow
+Type=exec
+
+[Install]
+WantedBy=default.target
+        
+\end{code}
+
+\noindent\\The service definition allows \texttt{systemd} to manage the start
+and stop of the \cxoneflow service in response to system startup and shutdown.
+
+
+\section{Enable and Start the \cxoneflow Service}
+
+The following commands will enable the service and start \cxoneflow:
+
+\begin{code}{}{}{}
+sudo systemctl enable /opt/cxoneflow/cxoneflow.service
+sudo systemctl start cxoneflow
+\end{code}
+
