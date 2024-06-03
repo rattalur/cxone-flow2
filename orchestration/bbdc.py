@@ -37,6 +37,11 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
     def log():
         return logging.getLogger("BitBucketDataCenterOrchestrator")
 
+    @staticmethod
+    @property
+    def config_key():
+        return "bbdc"
+
     def __init__(self, headers : dict, webhook_payload : dict):
         OrchestratorBase.__init__(self, headers, webhook_payload)
         
