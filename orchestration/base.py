@@ -17,9 +17,8 @@ class OrchestratorBase:
         self.__webhook_payload = webhook_payload
         self.__headers = headers
 
-    @staticmethod
     @property
-    def config_key():
+    def config_key(self):
         raise NotImplementedError("config_key")
 
     @property

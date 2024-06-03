@@ -39,9 +39,8 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
     def log() -> logging.Logger:
         return logging.getLogger("AzureDevOpsEnterpriseOrchestrator")
 
-    @staticmethod
     @property
-    def config_key():
+    def config_key(self):
         return "adoe"
 
     def __init__(self, headers, webhook_payload):
