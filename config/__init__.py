@@ -8,11 +8,36 @@ from scm_services import \
     adoe_cloner_factory, \
     adoe_api_auth_factory, \
     bbdc_api_auth_factory, \
-    SCMService
+    SCMService, ADOEService, BBDCService
 from api_utils import APISession
 from cxone_service import CxOneService
 from password_strength import PasswordPolicy
 from cxoneflow_logging import SecretRegistry
+from workflows.state_service import WorkflowStateService
+from workflows.pull_request import PullRequestWorkflow
+from workflows import ResultSeverity, ResultStates
+from typing import Tuple
+from multiprocessing import cpu_count
+
+
+def get_workers_count():
+    if "CXONEFLOW_WORKERS" not in os.environ.keys():
+        return int(cpu_count() / 2)
+    else:
+        return min(int(cpu_count() - 1), int(os.environ['CXONEFLOW_WORKERS']))
+
+def get_log_level():
+    if "LOG_LEVEL" not in os.environ.keys():
+        loglevel="INFO"
+    else:
+        loglevel=os.environ['LOG_LEVEL']
+
+
+def get_config_path():
+    if "CONFIG_YAML_PATH" in os.environ.keys():
+        return os.environ['CONFIG_YAML_PATH']
+    else:
+        return "./config.yaml"
 
 class ConfigurationException(Exception):
 
@@ -48,16 +73,29 @@ class RouteNotFoundException(Exception):
     pass
 
 class CxOneFlowConfig:
-
     __shared_secret_policy = PasswordPolicy.from_names(length=20, uppercase=3, numbers=3, special=2)
+
+    __cxone_service_tuple_index = 1
+    __scm_service_tuple_index = 2
+    __workflow_service_tuple_index = 3
 
     @staticmethod
     def log():
         return logging.getLogger("CxOneFlowConfig")
+    
+    @staticmethod
+    def get_service_monikers():
+        return list(CxOneFlowConfig.__scm_config_tuples_by_service_moniker.keys())
 
     @staticmethod
-    def retrieve_services_by_route(clone_urls, scm_config_key):
+    def retrieve_services_by_moniker(moniker : str) -> Tuple[CxOneService,SCMService,WorkflowStateService]:
+        service_tuple = CxOneFlowConfig.__scm_config_tuples_by_service_moniker[moniker]
+        return service_tuple[CxOneFlowConfig.__cxone_service_tuple_index], service_tuple[CxOneFlowConfig.__scm_service_tuple_index], \
+            service_tuple[CxOneFlowConfig.__workflow_service_tuple_index]
 
+
+    @staticmethod
+    def retrieve_services_by_route(clone_urls : str, scm_config_key : str) -> Tuple[CxOneService,SCMService,WorkflowStateService]:
         if type(clone_urls) is list:
             it_list = clone_urls
         else:
@@ -66,7 +104,8 @@ class CxOneFlowConfig:
         for url in it_list:
             for entry in CxOneFlowConfig.__ordered_scm_config_tuples[scm_config_key]:
                 if entry[0].match(url):
-                    return entry[1], entry[2]
+                    return entry[CxOneFlowConfig.__cxone_service_tuple_index], entry[CxOneFlowConfig.__scm_service_tuple_index], \
+                    entry[CxOneFlowConfig.__workflow_service_tuple_index]
 
         CxOneFlowConfig.log().error(f"No route matched for {clone_urls}")
         raise RouteNotFoundException(clone_urls)
@@ -94,13 +133,18 @@ class CxOneFlowConfig:
                     index = 0
                     for repo_config_dict in CxOneFlowConfig.__raw[scm]:
 
-                        repo_matcher, cxone_service, scm_service = CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__cloner_factories[scm], 
-                                                                                               CxOneFlowConfig.__auth_factories[scm], repo_config_dict, f"/{scm}[{index}]")
+                        repo_matcher, cxone_service, scm_service, workflow_service_client = CxOneFlowConfig.__setup_scm(CxOneFlowConfig.__cloner_factories[scm], 
+                                                                                               CxOneFlowConfig.__auth_factories[scm], 
+                                                                                               CxOneFlowConfig.__scm_factories[scm],
+                                                                                               repo_config_dict, f"/{scm}[{index}]")
                         
+                        scm_tuple = (repo_matcher, cxone_service, scm_service, workflow_service_client)
+                        CxOneFlowConfig.__scm_config_tuples_by_service_moniker[scm_service.moniker] = scm_tuple
+						
                         if not scm in CxOneFlowConfig.__ordered_scm_config_tuples:
-                            CxOneFlowConfig.__ordered_scm_config_tuples[scm] = [(repo_matcher, cxone_service, scm_service)]
+                            CxOneFlowConfig.__ordered_scm_config_tuples[scm] = [scm_tuple]
                         else:
-                            CxOneFlowConfig.__ordered_scm_config_tuples[scm].append((repo_matcher, cxone_service, scm_service))
+                            CxOneFlowConfig.__ordered_scm_config_tuples[scm].append(scm_tuple)
 
                         index += 1
         except Exception as ex:
@@ -142,6 +186,53 @@ class CxOneFlowConfig:
             return default
         else:
             return config_dict[key]
+
+
+    __default_amqp_url = "amqp://localhost:5672"
+
+    @staticmethod
+    def __workflow_service_client_factory(config_path, moniker, **kwargs):
+        if kwargs is None or len(kwargs.keys()) == 0:
+            return WorkflowStateService(moniker, CxOneFlowConfig.__default_amqp_url, None, None, True, PullRequestWorkflow())
+        else:
+
+            pr_workflow_dict = CxOneFlowConfig.__get_value_for_key_or_default("pull-request", kwargs, {})
+            scan_monitor_dict = CxOneFlowConfig.__get_value_for_key_or_default("scan-monitor", kwargs, {})
+
+            exclusions_dict = CxOneFlowConfig.__get_value_for_key_or_default("exclusions", kwargs, {})
+            excluded_states = excluded_severities = []
+
+            try:
+                excluded_states = [ResultStates(state) for state in CxOneFlowConfig.__get_value_for_key_or_default("state", exclusions_dict, [])]
+            except ValueError as ve:
+                raise ConfigurationException(f"{config_path}/exclusions/state {ve}: must be one of {ResultStates.names()}")
+
+            try:
+                excluded_severities = [ResultSeverity(sev) for sev in CxOneFlowConfig.__get_value_for_key_or_default("severity", exclusions_dict, [])]
+            except ValueError as ve:
+                raise ConfigurationException(f"{config_path}/exclusions/severity {ve}: must be one of {ResultSeverity.names()}")
+
+            pr_workflow = PullRequestWorkflow(excluded_severities, excluded_states,
+                CxOneFlowConfig.__get_value_for_key_or_default("enabled", pr_workflow_dict, False), \
+                int(CxOneFlowConfig.__get_value_for_key_or_default("poll-interval-seconds", scan_monitor_dict, 60)), \
+                int(CxOneFlowConfig.__get_value_for_key_or_default("scan-timeout-hours", scan_monitor_dict, 48)) \
+                )
+
+            amqp_dict = CxOneFlowConfig.__get_value_for_key_or_default("amqp", kwargs, None)
+
+            if not amqp_dict is None:
+                amqp_url = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, "amqp-url", amqp_dict)
+                amqp_user = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(amqp_dict, "amqp-user", None)
+                amqp_password = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(amqp_dict, "amqp-password", None)
+                ssl_verify = CxOneFlowConfig.__get_value_for_key_or_default("ssl-verify", amqp_dict, True)
+                
+                return WorkflowStateService(moniker, amqp_url, amqp_user, amqp_password, ssl_verify, pr_workflow, \
+                                            int(CxOneFlowConfig.__get_value_for_key_or_default("poll-max-interval-seconds", scan_monitor_dict, 600)),\
+                                            int(CxOneFlowConfig.__get_value_for_key_or_default("poll-backoff-multiplier", scan_monitor_dict, 2)))
+            else:
+                return WorkflowStateService(moniker, CxOneFlowConfig.__default_amqp_url, None, None, True, pr_workflow)
+
+            
 
     @staticmethod
     def __cxone_client_factory(config_path, **kwargs):
@@ -206,6 +297,7 @@ class CxOneFlowConfig:
 
 
     __ordered_scm_config_tuples = {}
+    __scm_config_tuples_by_service_moniker = {}
 
     __minimum_api_auth_keys = ['token', 'password']
     __basic_auth_keys = ['username', 'password']
@@ -263,13 +355,16 @@ class CxOneFlowConfig:
         return retval
 
     @staticmethod
-    def __setup_scm(cloner_factory, api_auth_factory, config_dict, config_path):
+    def __setup_scm(cloner_factory, api_auth_factory, scm_class, config_dict, config_path):
         repo_matcher = re.compile(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'repo-match', config_dict), re.IGNORECASE)
 
         service_moniker = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'service-name', config_dict)
 
         cxone_client = CxOneFlowConfig.__cxone_client_factory(f"{config_path}/cxone", 
                                                             **(CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'cxone', config_dict)))
+        
+        workflow_service_client = CxOneFlowConfig.__workflow_service_client_factory(f"{config_path}/feedback", service_moniker, 
+                                                                **(CxOneFlowConfig.__get_value_for_key_or_default('feedback', config_dict, {})))
 
         scan_config_dict = CxOneFlowConfig.__get_value_for_key_or_default('scan-config', config_dict, {} )
 
@@ -303,9 +398,9 @@ class CxOneFlowConfig:
             clone_auth_dict = api_auth_dict
             clone_config_path = f"{config_path}/connection/api-auth"
                
-        scm_service = SCMService(service_moniker, api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(cloner_factory, clone_auth_dict, clone_config_path))
-      
-        return repo_matcher, cxone_service, scm_service
+        scm_service = scm_class(service_moniker, api_session, scm_shared_secret, CxOneFlowConfig.__cloner_factory(cloner_factory, clone_auth_dict, clone_config_path))
+
+        return repo_matcher, cxone_service, scm_service, workflow_service_client
 
 
     __cloner_factories = {
@@ -316,6 +411,9 @@ class CxOneFlowConfig:
         'bbdc' : bbdc_api_auth_factory,
         'adoe' : adoe_api_auth_factory }
         
+    __scm_factories = {
+        'bbdc' : BBDCService,
+        'adoe' : ADOEService }
 
         
 

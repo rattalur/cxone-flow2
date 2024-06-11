@@ -1,3 +1,4 @@
+from jsonpath_ng import parse
 from .projects import ProjectRepoConfig
 from . import CxOneClient
 from .util import json_on_ok
@@ -80,3 +81,104 @@ class ScanInvoker:
             return None
 
         return upload_url
+
+class ScanInspector:
+
+    __root_status_query = parse("$.status")
+    __scan_engines_query = parse("$.engines")
+    __status_details_query = parse("$.statusDetails")
+
+    __projectid_query = parse("$.projectId")
+    __scanid_query = parse("$.id")
+
+    __executing_states = ["Queued", "Running"]
+    __failed_states = ["Failed", "Canceled"]
+    __maybe_states = ["Partial"]
+    __success_states = ["Completed"]
+
+    def __init__(self, json : dict):
+        self.__json = json
+
+    def __root_status(self):
+        return ScanInspector.__root_status_query.find(self.__json)[0].value
+    
+    def __requested_engines(self):
+        return ScanInspector.__scan_engines_query.find(self.__json)[0].value
+
+    def __status_details(self):
+        return ScanInspector.__status_details_query.find(self.__json)[0].value
+    
+    @property
+    def project_id(self):
+        return ScanInspector.__projectid_query.find(self.__json)[0].value
+
+    @property
+    def scan_id(self):
+        return ScanInspector.__scanid_query.find(self.__json)[0].value
+
+    def __current_engine_states(self):
+        return_states = []
+        engines = self.__requested_engines()
+        details = self.__status_details()
+        for detail_dict in details:
+            if detail_dict['name'] in engines:
+                if detail_dict['status'] not in return_states:
+                    return_states.append(detail_dict['status'])
+        
+        return return_states
+
+
+    @property
+    def json(self) -> dict:
+        return self.__json
+
+    @property
+    def executing(self):
+        if self.__root_status() in ScanInspector.__executing_states:
+            return True
+        elif self.__root_status() in ScanInspector.__maybe_states:
+            return len([s for s in self.__current_engine_states() if s in ScanInspector.__executing_states + ScanInspector.__maybe_states]) > 0
+        
+        return False
+
+    @property
+    def failed(self):
+        if self.__root_status() in ScanInspector.__failed_states:
+            return True
+
+        return False
+
+    @property
+    def successful(self):
+        if self.__root_status() in ScanInspector.__success_states:
+            return True
+        elif self.executing:
+            return False
+        elif self.__root_status() in ScanInspector.__maybe_states:
+            maybe = [s for s in self.__current_engine_states() if s in ScanInspector.__maybe_states]
+            success = [s for s in self.__current_engine_states() if s in ScanInspector.__success_states]
+            return len(maybe) == 0 and len(success) > 0
+        
+        return False
+    
+    @property
+    def state_msg(self):
+        engine_statuses = []
+
+        for detail in self.__status_details():
+            stub = f"{detail['name']}: {detail['status']}"
+            if detail['status'] not in ScanInspector.__success_states and len(detail['details']) > 0:
+                engine_statuses.append(f"{stub}({detail['details']})")
+            else:
+                engine_statuses.append(stub)
+
+        return f"Status: {self.__root_status()} [{'|'.join(engine_statuses)}]"
+
+
+
+class ScanLoader:
+
+    @staticmethod
+    async def load(cxone_client : CxOneClient, scanid : str) -> ScanInspector:
+        scan = json_on_ok(await cxone_client.get_scan(scanid))
+        return ScanInspector(scan)

@@ -5,8 +5,9 @@ from cxone_api.util import CloneUrlParser
 import logging
 from cxone_service import CxOneService
 from scm_services import SCMService, Cloner
+from workflows.state_service import WorkflowStateService
 from pathlib import Path
-
+from cxone_api.scanning import ScanInspector
 
 class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
 
@@ -62,8 +63,8 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         self.__collection = Path(urllib.parse.urlparse(self.__collection_url).path).name
 
 
-    async def execute(self, cxone_service, scm_service):
-        return await AzureDevOpsEnterpriseOrchestrator.__workflow_map[self.__event](self, cxone_service, scm_service)
+    async def execute(self, cxone_service: CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService):
+        return await AzureDevOpsEnterpriseOrchestrator.__workflow_map[self.__event](self, cxone_service, scm_service, workflow_service)
 
     @staticmethod
     def __normalize_branch_name(branch):
@@ -82,12 +83,16 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         return self.__repo_key
 
     @property
+    def _repo_organization(self) -> str:
+        return self.__collection
+
+    @property
     def _repo_name(self):
         return self.__repo_slug
 
     @property
     def _repo_slug(self):
-        return urllib.parse.quote(self.__repo_slug)
+        return self.__repo_slug
     
     async def is_signature_valid(self, shared_secret):
         base64_payload = self._headers['Authorization'].split(" ")[-1:].pop()
@@ -124,14 +129,14 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
         return bool(AzureDevOpsEnterpriseOrchestrator.__pr_draft_query.find(self.__json)[0].value)
 
 
-    async def _execute_push_scan_workflow(self, cxone_service : CxOneService, scm_service : SCMService):
+    async def _execute_push_scan_workflow(self, cxone_service : CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService):
         self.__source_branch = self.__target_branch = AzureDevOpsEnterpriseOrchestrator.__normalize_branch_name(
             [x.value for x in list(self.__push_target_branch_query.find(self.__json))][0])
         self.__source_hash = self.__target_hash = [x.value for x in list(self.__push_target_hash_query.find(self.__json))][0]
 
-        return await OrchestratorBase._execute_push_scan_workflow(self, cxone_service, scm_service)
+        return await OrchestratorBase._execute_push_scan_workflow(self, cxone_service, scm_service, workflow_service)
 
-    async def _execute_pr_scan_workflow(self, cxone_service : CxOneService, scm_service : SCMService):
+    async def _execute_pr_scan_workflow(self, cxone_service : CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService) -> ScanInspector:
         if await self.__is_pr_draft():
             AzureDevOpsEnterpriseOrchestrator.log().info(f"Skipping draft PR {AzureDevOpsEnterpriseOrchestrator.__pr_self_link_query.find(self.__json)[0].value}")
             return
@@ -155,7 +160,7 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
 
         if len(existing_scans) > 0:
             # This is a scan tag update, not a scan.
-            return await OrchestratorBase._execute_pr_tag_update_workflow(self, cxone_service, scm_service)
+            return await OrchestratorBase._execute_pr_tag_update_workflow(self, cxone_service, scm_service, workflow_service)
         else:
             repo_details = await scm_service.exec("GET", f"{self.__collection}/{self._repo_project_key}/_apis/git/repositories/{self.__repository_id}")
 
@@ -165,7 +170,7 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
 
             self.__default_branches = [AzureDevOpsEnterpriseOrchestrator.__normalize_branch_name(repo_details.json()['defaultBranch'])]
             
-            return await OrchestratorBase._execute_pr_scan_workflow(self, cxone_service, scm_service)
+            return await OrchestratorBase._execute_pr_scan_workflow(self, cxone_service, scm_service, workflow_service)
 
 
     

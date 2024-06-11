@@ -73,9 +73,14 @@ AuthRegionEndpoints = {
 class CxOneApiEndpoint:
     def __init__(self, server, scheme=DEFAULT_SCHEME):
         self.__endpoint_url = urllib.parse.urlunsplit((scheme, server, "/api/", None, None))
+        self.__root_url = urllib.parse.urlunsplit((scheme, server, "/", None, None))
 
     def __str__(self):
         return str(self.__endpoint_url)
+    
+    @property
+    def display_endpoint(self):
+        return self.__root_url
 
 class ApiUS(CxOneApiEndpoint):
     def __init__(self):
@@ -204,11 +209,6 @@ class CxOneClient:
         self.__timeout = timeout
         self.__retries = retries
 
-        self.__auth_endpoint = tenant_auth_endpoint
-        self.__api_endpoint = api_endpoint
-        self.__timeout = timeout
-        self.__retries = retries
-
         self.__auth_result = None
 
 
@@ -248,7 +248,11 @@ class CxOneClient:
     @property
     def api_endpoint(self):
         return str(self.__api_endpoint)
-    
+
+    @property
+    def display_endpoint(self):
+        return str(self.__api_endpoint.display_endpoint)
+
     @property
     def admin_endpoint(self):
         return self.__auth_endpoint.admin_endpoint
@@ -383,6 +387,10 @@ class CxOneClient:
         url = CxOneClient.__join_query_dict(url, kwargs)
         return await self.__exec_request(requests.get, url)
 
+    async def get_scan(self, scanid):
+        url = urljoin(self.api_endpoint, f"scans/{scanid}")
+        return await self.__exec_request(requests.get, url)
+
     async def update_scan_tags(self, scan_id : str, payload : dict):
         url = urljoin(self.api_endpoint, f"scans/{scan_id}/tags")
         return await self.__exec_request(requests.put, url, json=payload)
@@ -461,5 +469,15 @@ class CxOneClient:
         url = urljoin(self.api_endpoint, f"repos-manager/getscmdtobyid?scmId={scmId}")
         return await self.__exec_request(requests.get, url)
 
+    async def create_report(self, **kwargs):
+        url = urljoin(self.api_endpoint, f"reports")
+        return await self.__exec_request(requests.post, url, json=kwargs)
 
+    async def get_report_generation_status(self, reportid : str, **kwargs):
+        url = urljoin(self.api_endpoint, f"reports/{reportid}")
+        url = CxOneClient.__join_query_dict(url, kwargs)
+        return await self.__exec_request(requests.get, url)
 
+    async def download_report(self, reportid : str):
+        url = urljoin(self.api_endpoint, f"reports/{reportid}/download")
+        return await self.__exec_request(requests.get, url)

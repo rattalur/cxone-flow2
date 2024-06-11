@@ -5,3 +5,7 @@ password-strength
 jsonpath-ng
 Gunicorn
 requests
+aio-pika
+dataclasses-json
+markdown
+aenum
