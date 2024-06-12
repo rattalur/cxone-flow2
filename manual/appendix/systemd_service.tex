@@ -29,7 +29,7 @@ Creating a reusable container with the name \textbf{cxoneflow} can be done with 
 command:
 
 \begin{code}{Container Creation Command}{}{}
-docker create --rm --name "cxoneflow" -p 443:8443 --env-file runtime.env \
+docker create --name "cxoneflow" -p 443:8443 --env-file runtime.env \
   -v /path/to/cert.pem:/opt/cxone/certs/mycert.pem \
   -v /path/to/private.key.pem:/opt/cxone/certs/my.private.key.pem \
   -v /path/to/config.yaml:/opt/cxone/config.yaml \
@@ -41,8 +41,6 @@ docker create --rm --name "cxoneflow" -p 443:8443 --env-file runtime.env \
 
 \begin{itemize}
     \item The container with the name \textbf{cxoneflow} is created.
-    \item The \texttt{----rm} automatically removes the container named \textbf{cxoneflow} if
-    it exists.
     \item Port 443 is mapped to port 8443 of the container to support secure communication with
     the \cxoneflow endpoint.
     \item Runtime environment variables (as described in Section \ref{sec:runtime-config}) 
@@ -84,10 +82,35 @@ and stop of the \cxoneflow service in response to system startup and shutdown.
 
 \section{Enable and Start the \cxoneflow Service}
 
-The following commands will enable the service and start \cxoneflow:
+The following commands will enable the service to start automatically 
+on reboot and start \cxoneflow:
 
 \begin{code}{}{}{}
 sudo systemctl enable /opt/cxoneflow/cxoneflow.service
 sudo systemctl start cxoneflow
 \end{code}
+
+\section{Upgrading}
+
+A new instance of \cxoneflow can be upgraded with the following steps:
+
+\begin{enumerate}
+  \item Stop the \cxoneflow systemd service.
+  \item Remove the \texttt{cxoneflow} container instance.
+  \item Pull the latest \cxoneflow container image.
+  \item Recreate the \texttt{cxoneflow} container image.
+  \item Start the \cxoneflow systemd service.
+\end{enumerate}
+
+
+
+\begin{code}{Upgrade Commands}{}{}
+  sudo systemctl stop cxoneflow
+  docker container rm cxoneflow
+  docker pull ghcr.io/checkmarx-ts/cxone/cxone-flow:latest
+  <... docker create command ..>
+  sudo systemctl start cxoneflow
+\end{code}
+ 
+
 

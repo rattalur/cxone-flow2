@@ -230,6 +230,10 @@ workflows are configured.
         progress\\during workflow orchestration. The \texttt{scan-monitor}\\element
         is described in the section
         \\"\hyperref[sec:scan-monitor-element]{YAML Configuration Element: \texttt{scan-monitor}}"}\\
+        \midrule
+        \texttt{exclusions} & No & N/A & \makecell[l]{Settings for excluding results from pull request PR\\
+        decorations.  The \texttt{exclusions} element is described in the\\
+        section "\hyperref[sec:exclusions-element]{YAML Configuration Element: \texttt{exclusions}}"}\\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -332,8 +336,53 @@ the workflow will wait forever for the scan to finish executing.
     \end{tabularx}
 \end{table}
 
+\paragraph{YAML Configuration Element: \texttt{exclusions} }\label{sec:exclusions-element}
 
-\pagebreak
+\noindent\\\\The \texttt{exclusions} element, described in 
+Table \ref{tab:exclusions-section-keys}, configures the parameters for excluding
+results from feedback output.  Each of the elements is a list that can be configured
+with multiple exclusion elements.
+
+\noindent\\The list of states supported are:
+
+\begin{itemize}
+    \item Not Exploitable
+    \item To Verify
+    \item Proposed Not Exploitable
+    \item Confirmed
+    \item Urgent
+\end{itemize}
+
+
+\noindent\\The list of severities supported are:
+
+\begin{itemize}
+    \item Critical
+    \item High
+    \item Medium
+    \item Low
+    \item Info
+\end{itemize}
+
+
+
+\begin{table}[h]
+    \caption{\texttt{exclusions} YAML Element}  
+    \label{tab:exclusions-section-keys}      
+    \begin{tabularx}{\textwidth}{lccl}
+        \toprule
+        \textbf{Key} & \textbf{Required} & \textbf{Default} & \textbf{Description}\\
+        \midrule
+        \texttt{state} & No & None & \makecell[l]{A list of result states that should be excluded
+        from feedback\\output.  Most organizations will add at least\\\texttt{Not Exploitable}
+        to this list.}\\
+        \midrule
+        \texttt{severity} & No & None & \makecell[l]{A list of severities that will be excluded from feedback output.}\\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
 \paragraph{YAML Configuration Element: \texttt{connection} }\label{sec:connection-element}
 
 \noindent\\\\The \texttt{connection} element, described in Table \ref{tab:connection-section-keys}, 
