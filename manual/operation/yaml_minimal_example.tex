@@ -86,3 +86,28 @@ adoe:
         iam-endpoint: US
         api-endpoint: US
 \end{code}
+
+
+\begin{code}{Minimal YAML Configuration Example}{Enabling Pull Request Feedback}{}
+    secret-root-path: /run/secrets
+    
+    bbdc:
+        - service-name: BitBucket DC
+          repo-match: .*
+          feedback:
+            pull-request:
+              enabled: "True"
+          connection:
+            base-url: https://scm.corp.com
+            shared-secret: scm-shared-secret
+            api-auth:
+                token: scm-token-secret
+          cxone:
+            tenant: mytenant
+            oauth:
+                client-id: my-oauth-id
+                client-secret: my-oauth-secret
+            iam-endpoint: US
+            api-endpoint: US
+    \end{code}
+    

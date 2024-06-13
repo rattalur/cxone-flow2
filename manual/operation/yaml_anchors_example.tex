@@ -1,7 +1,6 @@
 This example demonstrates defining common connection parameters that can be applied
 to all connection definitions:
 
-
 \begin{code}{Compacted Full YAML Configuration Example}{[CxOne: oauth]}{[SCM: token auth]}
 secret-root-path: /run/secrets
 
@@ -10,13 +9,16 @@ my-connection-params: &common-connection-params
     retries: 3
     ssl-verify: True
     proxies:
-    http: http://proxy.corp.com:8080
-    https: http://proxy.corp.com:8080
+        http: http://proxy.corp.com:8080
+        https: http://proxy.corp.com:8080
 
 
 bbdc:
     - service-name: BitBucket DC
       repo-match: .*
+      feedback:
+        pull-request:
+            enabled: "True"
       scan-config:
           default-scan-engines:
               sca:
