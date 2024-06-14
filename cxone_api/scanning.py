@@ -4,11 +4,12 @@ from . import CxOneClient
 from .util import json_on_ok
 from .exceptions import ScanException
 from requests import Response
+from typing import Union
 
 
 class ScanInvoker:
     @staticmethod
-    async def scan_get_response(cxone_client : CxOneClient, project_repo : ProjectRepoConfig, branch : str, engines : list = None , tags : dict = None, src_zip_path : str = None,
+    async def scan_get_response(cxone_client : CxOneClient, project_repo : ProjectRepoConfig, branch : str, engine_config : Union[list,dict] = None , tags : dict = None, src_zip_path : str = None,
                    clone_user : str = None, clone_cred_type : str = None, clone_cred_value : str = None) -> Response:
         submit_payload = {}
 
@@ -34,7 +35,10 @@ class ScanInvoker:
                 }
 
 
-            submit_payload["config"] = [{ "type" : x, "value" : {} } for x in engines] if engines is not None else {}
+            if type(engine_config) is list:
+                submit_payload["config"] = [{ "type" : x, "value" : {} } for x in engine_config] if engine_config is not None else {}
+            elif type(engine_config) is dict:
+                submit_payload["config"] = [{ "type" : x, "value" : {} if engine_config[x] is None else engine_config[x]} for x in engine_config] if engine_config is not None else {}
 
             if tags is not None:
                 submit_payload["tags"] = tags
@@ -50,7 +54,7 @@ class ScanInvoker:
                 "repoUrl" : await project_repo.repo_url,
                 "projectId" : project_repo.project_id,
                 "defaultBranch" : branch,
-                "scannerTypes" : engines if engines is not None else [],
+                "scannerTypes" : engine_config if engine_config is not None else [],
                 "repoId" : await project_repo.repo_id
             }
 
@@ -182,3 +186,74 @@ class ScanLoader:
     async def load(cxone_client : CxOneClient, scanid : str) -> ScanInspector:
         scan = json_on_ok(await cxone_client.get_scan(scanid))
         return ScanInspector(scan)
+
+
+
+
+class ScanFilterConfig:
+
+    @staticmethod
+    async def from_project_config_json(cxone_client : CxOneClient, project_config : list, tenant_config : list = None):
+        retval = ScanFilterConfig()
+
+        if tenant_config is None:
+            working_tenant_config = json_on_ok(await cxone_client.get_tenant_configuration() )
+        else:
+            working_tenant_config = tenant_config
+
+        retval.__engine_filters = {}
+
+        ScanFilterConfig.__set_engine_filter(working_tenant_config, retval.__engine_filters)
+        ScanFilterConfig.__set_engine_filter(project_config, retval.__engine_filters)
+
+        return retval
+
+    @staticmethod
+    def __set_engine_filter(project_config_dict, dest_dict):
+        for entry in project_config_dict:
+            if entry['value'] is None or len(entry['value']) == 0:
+                continue
+
+            if entry['key'].startswith("scan.config"):
+                engine_name, config_name = entry['key'].split(".")[-2:]
+
+                if config_name == "filter":
+                    if engine_name not in dest_dict.keys():
+                        dest_dict[engine_name] = { config_name : entry['value']}
+                    else:
+                        dest_dict[engine_name][config_name] = ScanFilterConfig.__append_csv_strings(dest_dict[engine_name][config_name], entry['value'])
+
+    @staticmethod
+    async def from_project_id(cxone_client : CxOneClient, project_id : str):
+        return await ScanFilterConfig.from_project_config_json(cxone_client, json_on_ok(await cxone_client.get_project_configuration(project_id)))
+
+    @staticmethod
+    def __append_csv_strings(left : str, right : str):
+        if left is None:
+            return right
+        
+        if right is None:
+            return left
+        
+        return f"{left.rstrip(",")},{right.lstrip(",")}"
+    
+    def compute_filters_with_defaults(self, default_engine_config : dict):
+        retval = {}
+        for engine in default_engine_config.keys():
+            if engine not in retval.keys():
+                retval[engine] = {}
+
+            if default_engine_config[engine] is None:
+                continue
+
+            for config_name in default_engine_config[engine].keys():
+
+                if config_name == 'filter' and engine in self.__engine_filters.keys() and "filter" in self.__engine_filters[engine].keys():
+                    retval[engine][config_name] = ScanFilterConfig.__append_csv_strings(self.__engine_filters[engine][config_name], 
+                                                                                        default_engine_config[engine][config_name])
+                else:
+                    retval[engine][config_name] = default_engine_config[engine][config_name]
+        
+        return retval
+
+    

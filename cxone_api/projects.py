@@ -12,7 +12,7 @@ class ProjectRepoConfig:
         self.__lock = asyncio.Lock()
 
     @staticmethod
-    async def from_loaded_json(cxone_client : CxOneClient, json : dict):
+    async def from_project_json(cxone_client : CxOneClient, json : dict):
         retval = ProjectRepoConfig()
         ProjectRepoConfig.__common_init(retval, cxone_client)
         retval.__project_data = json
