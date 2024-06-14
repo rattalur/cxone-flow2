@@ -36,6 +36,8 @@ unencrypted webhook payloads.
 
 \section{Deployment Considerations}
 
+\subsection{Hosting}
+
 The \cxoneflow container is stateless, listens on port 8000 for unencrypted webhook event delivery, 
 and listens on port 8443 for encrypted webhook event delivery.  It is possible to map port 80 and 443
 externally to the internal container ports.  A default self-signed SSL certificate will be used
@@ -52,5 +54,71 @@ ensure availability.  This will mean you'll need to place the \cxoneflow host en
 a load balancer.  The \cxoneflow endpoint \texttt{/ping} is available for monitoring each
 running instance to ensure it is alive.
 
+\subsection{Scan Configuration Defaults}\label{sec:deployment-scan-defaults}
+
+Scan configuration defaults can be provided at the tenant-global and project scope
+in CheckmarxOne.  The \cxoneflow configuration can be configured to set configuration
+defaults for each scan.  It is important to understand how the CheckmarxOne default
+scan configurations work given the \cxoneflow configuration can override all other
+settings based on how the tenant and project defaults are configured.
+
+The configurations in CheckmarxOne are defined in the tenant or project scope with a
+flag that allows the value to be overridden at a lower level of configuration.  A
+SAST scan default preset, for example, is generally configured at the tenant scope
+as "ASA Premium" with the ability to override the preset at the project scope.  The
+result is that initial scans that do not define a preset at the project scope or
+at the time the scan is initiated use the globally-defined preset "ASA Premium".
+
+Configuring the SAST preset in a project's settings to something other than
+the SAST preset configured at the tenant scope will change the scan preset for that project.
+If the tenant scope configuration was such that the SAST preset could not be overridden, the
+option for configuring the preset would not appear in the project settings.
+
+Configuring the SAST preset as a per-scan default in \cxoneflow will override both
+the tenant and project scope settings if both are set to allow override.  This is 
+due to the scan scope being the lowest level configuration scope.  If a project scope
+configuration was such that the SAST preset could not be overridden, then the \cxoneflow
+default preset set at the time of scan will be ignored.
+
+The configurations at the tenant, project, and scan level scopes work based on overrides.
+This causes the value of a configuration to be set by the lowest level in which it is
+defined. This makes it possible to utilize the \cxoneflow per-scan defaults in a few
+different ways.
+
+If there are no per-scan defaults configured in \cxoneflow, all per-scan defaults
+can be configured at the tenant scope.  This gives the flexibility to override 
+the tenant scoped settings at the project scope; this is usually required so that
+the project can configure scan settings that are specific to the project.
+
+If per-scan defaults are configured in \cxoneflow, project scope settings can
+still be set but will be overridden by the per-scan settings by default.  It will require
+configuring the project settings and disabling override to prevent \cxoneflow per-scan
+configurations from replacing the project scope configurations.  This may be confusing
+to users who are not fully aware of how the scan configuration overrides work.
+
+\subsubsection{\cxoneflow Inheritance of \texttt{filter} Settings}
+
+The configuration scopes are implemented in CheckmarxOne as overrides for all
+configuration elements.  This is ideal for most elements, but not ideal for elements
+such as \texttt{filter} that defines the file/folder filters in each engine.  \cxoneflow
+interprets \texttt{filter} settings in each scan engine so that they are inherited
+in each scope rather than overridden.
+
+\noindent\\As an example, consider these filters defined in each scope:
+
+\begin{itemize}
+    \item Tenant Scope: "!**/test,!**/tests"
+    \item Project Scope "!**/*.sql"
+    \item \cxoneflow Per-Scan configuration: "!**/node\_modules"
+\end{itemize}
+
+\noindent\\After \cxoneflow applies the inheritance algorithm, the resulting file/folder filter setting at the scan scope will be:
+\\\\\texttt{"!**/test,!**/tests,!**/*.sql,!**/node\_modules"}
 
 
+\noindent\\From a maintenance perspective, configuring tenant-scope defaults
+with override enabled (such as SAST preset) can be used to avoid configuring
+per-scan defaults in \cxoneflow.  It is often desirable to also set engine-specific
+file/folder exclusions at the tenant scope to avoid scanning common exclusions.  
+This will likely make maintaining global settings easier in most cases given
+it is common to set scan defaults at the project scope.
