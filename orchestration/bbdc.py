@@ -68,6 +68,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
     async def is_signature_valid(self, shared_secret : str) -> bool:
         sig = self.get_header_key_safe('X-Hub-Signature')
         if sig is None:
+            BitBucketDataCenterOrchestrator.log().warning("X-Hub-Signature header is missing, rejecting.")
             return False
         
         hashalg,hash = sig.split("=")

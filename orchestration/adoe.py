@@ -93,9 +93,18 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
     @property
     def _repo_slug(self):
         return self.__repo_slug
-    
+
     async def is_signature_valid(self, shared_secret):
-        base64_payload = self._headers['Authorization'].split(" ")[-1:].pop()
+        auth = self.get_header_key_safe('Authorization')
+        if auth is None:
+            AzureDevOpsEnterpriseOrchestrator.log().warning("Authorization header is missing in request, rejecting.")
+            return False
+
+        base64_payload = auth.split(" ")[-1:].pop()
+        if base64_payload is None:
+            AzureDevOpsEnterpriseOrchestrator.log().warning("Authorization header is not in the correct form, rejecting.")
+            return False
+
         sent_secret = base64.b64decode(base64_payload).decode("utf-8").split(":")[-1:].pop()
         return sent_secret == shared_secret
 
@@ -105,7 +114,7 @@ class AzureDevOpsEnterpriseOrchestrator(OrchestratorBase):
 
         if parsed_clone_url.scheme in cloner.supported_protocols:
             return self.__clone_url
-        
+
         protocol = cloner.supported_protocols[0]
         port = cloner.destination_port
 
