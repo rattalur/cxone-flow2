@@ -8,7 +8,7 @@ from api_utils import auth_basic, auth_bearer
 
 def bitbucketdc_cloner_factory(username=None, password=None, token=None, ssh_path=None, ssh_port=None) -> Cloner:
         if username is not None and password is not None:
-                return Cloner.using_basic_auth(username, password) 
+                return Cloner.using_basic_auth(username, password, True) 
 
         if token is not None:
                 return Cloner.using_token_auth(token, username)
@@ -20,7 +20,7 @@ def bitbucketdc_cloner_factory(username=None, password=None, token=None, ssh_pat
 
 def adoe_cloner_factory(username=None, password=None, token=None, ssh_path=None, ssh_port=None) -> Cloner:
         if username is not None and password is not None:
-                return Cloner.using_basic_auth(username, password) 
+                return Cloner.using_basic_auth(username, password, True) 
 
         if token is not None:
                 return Cloner.using_basic_auth("", token, True)

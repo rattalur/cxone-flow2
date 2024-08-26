@@ -37,7 +37,7 @@ class Cloner:
             retval.__clone_cmd_stub = ["git", "clone"]
             retval.__fix_clone_url = lambda url: Cloner.__insert_creds_in_url(url, username, password)
         else:
-            encoded_creds = base64.b64encode(f"{username}:{password}".encode('UTF8')).decode('UTF8')
+            encoded_creds = SecretRegistry.register(base64.b64encode(f"{username}:{password}".encode('UTF8')).decode('UTF8'))
             retval.__clone_cmd_stub = ["git", "clone", "-c", f"http.extraHeader=Authorization: Basic {encoded_creds}"]
             retval.__fix_clone_url = lambda url: url
 
