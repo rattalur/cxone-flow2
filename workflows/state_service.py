@@ -12,6 +12,7 @@ from . import ScanStates, ScanWorkflow, FeedbackWorkflow
 from cxone_api.exceptions import ResponseException
 from .pr import PullRequestAnnotation, PullRequestFeedback
 from cxone_service import CxOneException
+import os
 
 class WorkflowStateService:
 
@@ -35,8 +36,8 @@ class WorkflowStateService:
     def log():
         return logging.getLogger("WorkflowStateService")
 
-    def __init__(self, moniker, amqp_url , amqp_user, amqp_password, ssl_verify, pr_workflow : AbstractWorkflow, max_interval_seconds : timedelta = 600, 
-                 backoff_scalar : int = 2):
+    def __init__(self, moniker, amqp_url , amqp_user, amqp_password, ssl_verify, server_base_url : str, pr_workflow : AbstractWorkflow, 
+                 max_interval_seconds : timedelta = 600, backoff_scalar : int = 2):
         self.__lock = asyncio.Lock()
         self.__max_interval = timedelta(seconds=max_interval_seconds)
         self.__backoff = backoff_scalar
@@ -46,6 +47,7 @@ class WorkflowStateService:
         self.__ssl_verify = ssl_verify
         self.__client = None
         self.__service_moniker = moniker
+        self.__server_base_url = server_base_url
 
         self.__workflow_map = {
             ScanWorkflow.PR : pr_workflow
@@ -124,10 +126,17 @@ class WorkflowStateService:
                 WorkflowStateService.log().debug(f"Creating AMQP connection to: {self.__amqp_url}")
                 ctx = None
 
-                if self.use_ssl and not self.__ssl_verify:
-                    ctx = create_default_context()
-                    ctx.check_hostname = False
-                    ctx.verify_mode = CERT_NONE
+                if isinstance(self.__ssl_verify, bool):
+                    if not self.__ssl_verify and self.use_ssl:
+                        ctx = create_default_context()
+                        ctx.check_hostname = False
+                        ctx.verify_mode = CERT_NONE
+                elif self.use_ssl:
+                    if os.path.isfile(self.__ssl_verify):
+                        ctx = create_default_context(cafile=self.__ssl_verify)
+                    elif os.path.isdir(self.__ssl_verify):
+                        ctx = create_default_context(capath=self.__ssl_verify)
+
 
                 self.__client = await aio_pika.connect_robust(self.__amqp_url, \
                                                     login=self.__amqp_user if self.__amqp_user is not None else "guest", \
@@ -145,7 +154,8 @@ class WorkflowStateService:
                 inspector = await cxone_service.load_scan_inspector(am.scanid)
 
                 if inspector is not None:
-                    annotation = PullRequestAnnotation(cxone_service.display_link, inspector.project_id, am.scanid, am.annotation, pr_details.source_branch)
+                    annotation = PullRequestAnnotation(cxone_service.display_link, inspector.project_id, am.scanid, am.annotation, pr_details.source_branch,
+                                                       self.__server_base_url)
                     await scm_service.exec_pr_decorate(pr_details.organization, pr_details.repo_project, pr_details.repo_slug, pr_details.pr_id,
                                                     am.scanid, annotation.full_content, annotation.summary_content)
                     await msg.ack()
@@ -171,7 +181,7 @@ class WorkflowStateService:
                 else:
                     feedback = PullRequestFeedback(self.__workflow_map[ScanWorkflow.PR].excluded_severities, 
                         self.__workflow_map[ScanWorkflow.PR].excluded_states, cxone_service.display_link, am.projectid, am.scanid, report, 
-                        scm_service.create_code_permalink, pr_details)
+                        scm_service.create_code_permalink, pr_details, self.__server_base_url)
                     await scm_service.exec_pr_decorate(pr_details.organization, pr_details.repo_project, pr_details.repo_slug, pr_details.pr_id,
                                                     am.scanid, feedback.full_content, feedback.summary_content)
                     await msg.ack()

@@ -39,6 +39,7 @@ def get_config_path():
     else:
         return "./config.yaml"
 
+
 class ConfigurationException(Exception):
 
     @staticmethod
@@ -82,6 +83,25 @@ class CxOneFlowConfig:
     @staticmethod
     def log():
         return logging.getLogger("CxOneFlowConfig")
+
+    @staticmethod
+    def get_default_ssl_verify_value():
+        if 'REQUESTS_CA_BUNDLE' in os.environ.keys():
+            return os.environ['REQUESTS_CA_BUNDLE']
+        
+        default_paths = [
+            "/etc/pki/tls/certs/ca-bundle.crt",
+            "/etc/ssl/certs/ca-certificates.crt"
+        ]
+        for bundle in default_paths:
+            if os.path.exists(bundle):
+                return bundle
+
+        CxOneFlowConfig.log().warning("************SSL verification is turned OFF************")
+        CxOneFlowConfig.log().warning("A path to the default CA bundle could not be determined.  Please set the REQUESTS_CA_BUNDLE environment variable.")
+        return False
+   
+    
     
     @staticmethod
     def get_service_monikers():
@@ -114,6 +134,11 @@ class CxOneFlowConfig:
         CxOneFlowConfig.log().error(f"No route matched for {clone_urls}")
         raise RouteNotFoundException(clone_urls)
 
+
+    @staticmethod
+    def get_base_url():
+        return CxOneFlowConfig.__server_base_url
+
     @staticmethod
     def bootstrap(config_file_path = "./config.yaml"):
 
@@ -123,10 +148,8 @@ class CxOneFlowConfig:
             with open(config_file_path, "rt") as cfg:
                 CxOneFlowConfig.__raw = yaml.safe_load(cfg)
 
-            if not "secret-root-path" in CxOneFlowConfig.__raw.keys():
-                raise ConfigurationException.missing_key_path("/secret-root-path")
-            else:
-                CxOneFlowConfig.__secret_root = CxOneFlowConfig.__raw['secret-root-path']
+            CxOneFlowConfig.__server_base_url = CxOneFlowConfig.__get_value_for_key_or_fail("", "server-base-url", CxOneFlowConfig.__raw)
+            CxOneFlowConfig.__secret_root = CxOneFlowConfig.__get_value_for_key_or_fail("", "secret-root-path", CxOneFlowConfig.__raw)
 
             if len(CxOneFlowConfig.__raw.keys() - CxOneFlowConfig.__cloner_factories.keys()) == len(CxOneFlowConfig.__raw.keys()):
                 raise ConfigurationException.missing_at_least_one_key_path("/", CxOneFlowConfig.__cloner_factories.keys())
@@ -197,7 +220,8 @@ class CxOneFlowConfig:
     @staticmethod
     def __workflow_service_client_factory(config_path, moniker, **kwargs):
         if kwargs is None or len(kwargs.keys()) == 0:
-            return WorkflowStateService(moniker, CxOneFlowConfig.__default_amqp_url, None, None, True, PullRequestWorkflow())
+            return WorkflowStateService(moniker, CxOneFlowConfig.__default_amqp_url, None, None, True, CxOneFlowConfig.__server_base_url, 
+                                        PullRequestWorkflow())
         else:
 
             pr_workflow_dict = CxOneFlowConfig.__get_value_for_key_or_default("pull-request", kwargs, {})
@@ -231,12 +255,12 @@ class CxOneFlowConfig:
                 amqp_url = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, "amqp-url", amqp_dict)
                 amqp_user = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(amqp_dict, "amqp-user", None)
                 amqp_password = CxOneFlowConfig.__get_secret_from_value_of_key_or_default(amqp_dict, "amqp-password", None)
-                ssl_verify = CxOneFlowConfig.__get_value_for_key_or_default("ssl-verify", amqp_dict, True)
+                ssl_verify = CxOneFlowConfig.__get_value_for_key_or_default("ssl-verify", amqp_dict, CxOneFlowConfig.get_default_ssl_verify_value())
                 
-                return WorkflowStateService(moniker, amqp_url, amqp_user, amqp_password, ssl_verify, pr_workflow, \
+                return WorkflowStateService(moniker, amqp_url, amqp_user, amqp_password, ssl_verify, CxOneFlowConfig.__server_base_url, pr_workflow, \
                                             max_poll_interval, poll_backoff)
             else:
-                return WorkflowStateService(moniker, CxOneFlowConfig.__default_amqp_url, None, None, True, pr_workflow, \
+                return WorkflowStateService(moniker, CxOneFlowConfig.__default_amqp_url, None, None, True, CxOneFlowConfig.__server_base_url, pr_workflow, \
                                             max_poll_interval, poll_backoff)
 
             
@@ -282,7 +306,7 @@ class CxOneFlowConfig:
                 CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', kwargs, 60), \
                 CxOneFlowConfig.__get_value_for_key_or_default('retries', kwargs, 3), \
                 CxOneFlowConfig.__get_value_for_key_or_default('proxies', kwargs, None), \
-                CxOneFlowConfig.__get_value_for_key_or_default('ssl-verify', kwargs, True) \
+                CxOneFlowConfig.__get_value_for_key_or_default('ssl-verify', kwargs, CxOneFlowConfig.get_default_ssl_verify_value()) \
                 )
         elif 'oauth' in kwargs.keys():
             oauth_params = CxOneFlowConfig.__get_value_for_key_or_fail(config_path, 'oauth', kwargs)
@@ -297,7 +321,7 @@ class CxOneFlowConfig:
                 CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', kwargs, 60), \
                 CxOneFlowConfig.__get_value_for_key_or_default('retries', kwargs, 3), \
                 CxOneFlowConfig.__get_value_for_key_or_default('proxies', kwargs, None), \
-                CxOneFlowConfig.__get_value_for_key_or_default('ssl-verify', kwargs, True) \
+                CxOneFlowConfig.__get_value_for_key_or_default('ssl-verify', kwargs, CxOneFlowConfig.get_default_ssl_verify_value()) \
                 )
 
         return None
@@ -391,7 +415,7 @@ class CxOneFlowConfig:
                                  CxOneFlowConfig.__get_value_for_key_or_default('timeout-seconds', connection_config_dict, 60), \
                                  CxOneFlowConfig.__get_value_for_key_or_default('retries', connection_config_dict, 3), \
                                  CxOneFlowConfig.__get_value_for_key_or_default('proxies', connection_config_dict, None), \
-                                 CxOneFlowConfig.__get_value_for_key_or_default('ssl-verify', connection_config_dict, True), \
+                                 CxOneFlowConfig.__get_value_for_key_or_default('ssl-verify', connection_config_dict, CxOneFlowConfig.get_default_ssl_verify_value()), \
                                 )
         
         scm_shared_secret = CxOneFlowConfig.__get_secret_from_value_of_key_or_fail(f"{config_path}/connection", 'shared-secret', connection_config_dict)
