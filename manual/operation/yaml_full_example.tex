@@ -1,6 +1,5 @@
-This example shows a \cxoneflow configuration using all default options defined
-as a handler when using a single SCM.  This is the same as one of the simple examples if
-an example had explicitly defined omitted default connection elements.
+This example shows a \cxoneflow configuration explicitly setting default options in a service 
+configuration for a single SCM.  The minimal examples leave several of these options as default.
 
 The \texttt{scan-config} element has been added to this configuration to
 demonstrate some of the controls that can be implemented over scan options.  In this
@@ -11,6 +10,10 @@ option keys are defined by the
 and described by
 \href{https://checkmarx.com/resource/documents/en/34965-68598-global-settings.html#UUID-8e38f06b-45d4-ea7f-5ff5-50deb22e43aa_UUID-1a4211ec-dbf9-a180-cb20-59e1246ec3fb}{Scanners Settings}.
 
+While there are options to apply scan configurations via \texttt{scan-config} elements, it is often the case that defining the scan configuration
+in \cxoneflow will have undesirable results.  When defined in the \cxoneflow configuration, the configuration will explicitly override Checkmarx One
+tenant and project level default scan configurations.  Details about utilizing the Checkmarx One configuration options for best results with \cxoneflow
+can be found in Section \ref{sec:deployment-scan-defaults}.
 
 \begin{code}{Full YAML Configuration Example}{[CxOne: oauth]}{[SCM: token auth]}
 secret-root-path: /run/secrets
@@ -59,17 +62,18 @@ bbdc:
             https: http://proxy.corp.com:8080
 \end{code}
 
+
 \pagebreak
 \noindent\\The next example shows a configuration where \cxoneflow has endpoint handlers for both
-BitBucket Data Center and Azure DevOps Enterprise.  Each SCM is configured to handle 3 distinct
-projects to demonstrate Basic, Token, and SSH authentication methods.  All the SCM endpoints
+BitBucket Data Center and Azure DevOps Enterprise.  Each SCM is configured to handle multiple distinct
+projects to demonstrate the use of multiple authentication methods.  All the SCM endpoints
 orchestrate scans in a single Checkmarx One tenant.
 
 \begin{code}{Multi-SCM YAML Configuration Example}{}{}
 secret-root-path: /run/secrets
 server-base-url: https://cxoneflow.mydomain.com:8443/
 adoe-connection: &adoe-con
-    base-url: http://adoe.scm.org/DefaultCollection
+    base-url: http://adoe.scm.org/
     shared-secret: scm-shared-secret
 bbdc-connection: &bbdc-con
     base-url: http://bbdc.scm.org
@@ -102,8 +106,6 @@ adoe:
         connection:
         <<: *adoe-con
         api-auth:
-            token: adoe-token-secret
-        clone-auth: &basic-creds
             username: username-secret
             password: password-secret
         cxone: *cxone
@@ -122,11 +124,5 @@ bbdc:
         <<: *bbdc-con
         api-auth:
             token: bbdc-token-proj-pat
-        cxone: *cxone
-    - service-name: BBDC-AsBasicAuth
-        repo-match: .*BAS
-        connection:
-        <<: *bbdc-con
-        api-auth: *basic-creds
         cxone: *cxone
 \end{code}

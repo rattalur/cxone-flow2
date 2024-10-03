@@ -6,12 +6,14 @@ that is compatible with other methods of deployment.
 """
 from _agent import __agent__
 from flask import Flask, request, Response, send_from_directory
-from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator, AzureDevOpsEnterpriseOrchestrator
-import json, logging, asyncio, os
+from orchestration import OrchestrationDispatch, BitBucketDataCenterOrchestrator, \
+    AzureDevOpsEnterpriseOrchestrator, GithubOrchestrator
+import json, logging, os
 from config import CxOneFlowConfig, ConfigurationException, get_config_path
 from time import perf_counter_ns
 from task_management import TaskManager
 import cxoneflow_logging as cof_logging
+from api_utils.auth_factories import EventContext, HeaderFilteredEventContext
 
 cof_logging.bootstrap()
 
@@ -43,19 +45,39 @@ async def bbdc_webhook_endpoint():
     __log.info("Received hook for BitBucket Data Center")
     __log.debug(f"bbdc webhook: headers: [{request.headers}] body: [{json.dumps(request.json)}]")
     try:
-        TaskManager.in_background(OrchestrationDispatch.execute(BitBucketDataCenterOrchestrator(request.headers, request.data)))
+        TaskManager.in_background(OrchestrationDispatch.execute(BitBucketDataCenterOrchestrator(EventContext(request.get_data(), dict(request.headers)))))
         return Response(status=204)
     except Exception as ex:
         __log.exception(ex)
         return Response(status=400)
 
+@app.post("/gh")
+async def github_webhook_endpoint():
+    __log.info("Received hook for Github")
+    __log.debug(f"github webhook: headers: [{request.headers}] body: [{json.dumps(request.json)}]")
+    try:
+        orch = GithubOrchestrator(HeaderFilteredEventContext(request.get_data(), dict(request.headers), "User-Agent|X-(Git)?[H|h]ub"))
+
+        if not orch.is_diagnostic:
+            TaskManager.in_background(OrchestrationDispatch.execute(orch))
+            return Response(status=204)
+        else:
+            # The ping has no route URL associated, so check if any route matches.
+            for service in CxOneFlowConfig.retrieve_scm_services(orch.config_key):
+                if await orch.is_signature_valid(service.shared_secret):
+                    return Response(status=200)
+            return Response(status=401)
+
+    except Exception as ex:
+        __log.exception(ex)
+        return Response(status=400)
   
 @app.post("/adoe")
 async def adoe_webhook_endpoint():
     __log.info("Received hook for Azure DevOps Enterprise")
     __log.debug(f"adoe webhook: headers: [{request.headers}] body: [{json.dumps(request.json)}]")
     try:
-        orch = AzureDevOpsEnterpriseOrchestrator(request.headers, request.data);
+        orch = AzureDevOpsEnterpriseOrchestrator(EventContext(request.get_data(), dict(request.headers)))
 
         if not orch.is_diagnostic:
             TaskManager.in_background(OrchestrationDispatch.execute(orch))
