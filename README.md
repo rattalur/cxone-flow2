@@ -1,8 +1,8 @@
 # CxOne Flow
 
-If you are familiar with [CxFlow](https://github.com/checkmarx-ltd/cx-flow) for Checkmarx SAST, the role of CxOne Flow will be familiar.  
+If you are familiar with [CxFlow](https://github.com/checkmarx-ltd/cx-flow) for Checkmarx SAST, you will be familiar with the role of CxOneFlow.  
 
-If not, CxOne Flow is a scan orchestrator that executes multiple source code analysis scans.  
+For those that have not used CxFlow with Checkmarx SAST, CxOneFlow is a scan orchestrator that executes multiple source code analysis scans.  It is driven by web hook events coming from a source control system.
 
 ## CxOneFlow vs CxFlow
 
@@ -17,10 +17,10 @@ Please refer to the [Releases](https://github.com/checkmarx-ts/cxone-flow/releas
 
 * Supported SCMs
     * BitBucket Data Center
-    * Azure DevOps Enterprise
+    * Azure DevOps Enterprise, On-premise or Cloud
     * GitHub Enterprise and Cloud
 * Scans are invoked by Push events when code is pushed to protected branches.
 * Scans are invoked on Pull-Requests that target a protected branch.
 * Scan results for Pull-Request scans are summarized in a pull-request comment.
 * Pull-Request state is reflected in scan tags as the pull request is under review.
-
+* Dependency resolution with SCA Resolver can be orchestrated to run behind the corporate firewall.
