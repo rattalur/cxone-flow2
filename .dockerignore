@@ -1,0 +1,17 @@
+**/__pycache__
+
+**/.vscode
+**/.venv
+**/.vscode
+**/.git
+**/.gitignore
+**/*.yaml
+**/*.yml
+
+agent_packages
+manual
+secrets
+tests
+test_data
+**/*.md
+LICENSE

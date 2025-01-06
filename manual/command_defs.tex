@@ -1,0 +1,24 @@
+\newcommand{\intlinksymbol}{\faSignIn}
+\newcommand{\extlinksymbol}{\faExternalLink}
+
+\newcommand{\symspace}{\kern 0.16667em}
+
+\newcommand{\extlink}[2]{#2\symspace\textsuperscript{\begin{tiny}\href{#1}{\extlinksymbol}\end{tiny}}}
+\newcommand{\intlink}[2]{#2\textsuperscript{\begin{tiny}\hyperref[#1]{\intlinksymbol}\end{tiny}}}
+
+\newcommand{\cxoneflowtext}{CxOneFlow}
+\newcommand{\cxoneflowns}{\extlink{https://github.com/checkmarx-ts/cxone-flow}{\cxoneflowtext}}
+\newcommand{\cxoneflow}{\cxoneflowns\space}
+
+\newcommand{\scaresolvertext}{SCA Resolver}
+\newcommand{\scaresolverns}{\extlink{https://docs.checkmarx.com/en/34965-19197-checkmarx-sca-resolver-download-and-installation.html}{\scaresolvertext}}
+\newcommand{\scaresolver}{\scaresolverns\space}
+
+
+\newcommand{\cxonetext}{Checkmarx One}
+\newcommand{\cxonens}{\extlink{https://docs.checkmarx.com/en/34965-68515-general-product-information.html}{\cxonetext}}
+\newcommand{\cxone}{\cxonens\space}
+
+\newcommand{\toolkittext}{cx-supply-chain-toolkit}
+\newcommand{\toolkitns}{\extlink{https://github.com/checkmarx-ts/cx-supply-chain-toolkit}{\toolkittext}}
+\newcommand{\toolkit}{\toolkitns\space}

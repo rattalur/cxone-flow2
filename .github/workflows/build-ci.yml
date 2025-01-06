@@ -17,17 +17,29 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build -f docker/Dockerfile .
+
+  build-deb-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - name: Build Debian amd64 Package
+        run: agent_packages/resolver/debian/build-package.sh
    
   execute-unit-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
       - uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
         with:
           python-version: '3.12'
+
       - name: Install packages
         run: pip install -r ${{ github.workspace }}/requirements.txt
+
       - name: Execute Unit Tests
         run: python -m unittest discover -v -p *_test.py -s ${{ github.workspace }}/tests
 

@@ -1,71 +1,115 @@
-import logging, asyncio, aio_pika, os
+import logging, asyncio, aio_pika
 import cxoneflow_logging as cof_logging
-from config import CxOneFlowConfig, ConfigurationException, get_config_path
-from workflows.state_service import WorkflowStateService
-from workflows.messaging import ScanAwaitMessage, ScanAnnotationMessage, ScanFeedbackMessage
-from typing import Any, Callable, Awaitable
+from config import ConfigurationException, get_config_path
+from config.server import CxOneFlowConfig
+from workflows.pr_feedback_service import PRFeedbackService
+from workflows.resolver_scan_service import ResolverScanService
+from workflows.messaging import (
+    ScanAwaitMessage,
+    ScanAnnotationMessage,
+    ScanFeedbackMessage,
+)
+from agent.resolver import ResolverResultsAgent, ResolverTimeoutAgent
+from agent import mq_agent
 
 cof_logging.bootstrap()
 
 __log = logging.getLogger("WorkflowAgent")
 
-async def process_poll(msg : aio_pika.abc.AbstractIncomingMessage) -> None:
+
+async def process_poll(msg: aio_pika.abc.AbstractIncomingMessage) -> None:
     try:
-        __log.debug(f"Received scan polling message on channel {msg.channel.number}: {msg.info()}")
+        __log.debug(
+            f"Received scan polling message on channel {msg.channel.number}: {msg.info()}"
+        )
         sm = ScanAwaitMessage.from_binary(msg.body)
-        cxone, _, wf = CxOneFlowConfig.retrieve_services_by_moniker(sm.moniker)
-        await wf.execute_poll_scan_workflow(msg, cxone)
+        services = CxOneFlowConfig.retrieve_services_by_moniker(sm.moniker)
+        await services.pr.execute_poll_scan_workflow(msg, services.cxone)
     except BaseException as ex:
         __log.exception(ex)
+        await msg.nack(requeue=False)
 
 
-async def process_pr_annotate(msg : aio_pika.abc.AbstractIncomingMessage) -> None:
+async def process_pr_annotate(msg: aio_pika.abc.AbstractIncomingMessage) -> None:
     try:
-        __log.debug(f"Received PR annotation message on channel {msg.channel.number}: {msg.info()}")
+        __log.debug(
+            f"Received PR annotation message on channel {msg.channel.number}: {msg.info()}"
+        )
         sm = ScanAnnotationMessage.from_binary(msg.body)
-        cxone, scm, wf = CxOneFlowConfig.retrieve_services_by_moniker(sm.moniker)
-        await wf.execute_pr_annotate_workflow(msg, cxone, scm)
+        services = CxOneFlowConfig.retrieve_services_by_moniker(sm.moniker)
+        await services.pr.execute_pr_annotate_workflow(
+            msg, services.cxone, services.scm
+        )
     except BaseException as ex:
         __log.exception(ex)
+        await msg.nack(requeue=False)
 
-async def process_pr_feedback(msg : aio_pika.abc.AbstractIncomingMessage) -> None:
+
+async def process_pr_feedback(msg: aio_pika.abc.AbstractIncomingMessage) -> None:
     try:
-        __log.debug(f"Received PR feedback message on channel {msg.channel.number}: {msg.info()}")
+        __log.debug(
+            f"Received PR feedback message on channel {msg.channel.number}: {msg.info()}"
+        )
         sm = ScanFeedbackMessage.from_binary(msg.body)
-        cxone, scm, wf = CxOneFlowConfig.retrieve_services_by_moniker(sm.moniker)
-        await wf.execute_pr_feedback_workflow(msg, cxone, scm)
+        services = CxOneFlowConfig.retrieve_services_by_moniker(sm.moniker)
+        await services.pr.execute_pr_feedback_workflow(
+            msg, services.cxone, services.scm
+        )
     except BaseException as ex:
         __log.exception(ex)
-
-async def agent(coro : Callable[[aio_pika.abc.AbstractIncomingMessage], Awaitable[Any]], moniker : str, queue : str):
-    _, _, wfs = CxOneFlowConfig.retrieve_services_by_moniker(moniker)
-
-    async with (await wfs.mq_client()).channel() as channel:
-        await channel.set_qos(prefetch_count=2)
-        q = await channel.get_queue(queue)
-
-        await q.consume(coro, arguments = {
-            "moniker" : moniker}, consumer_tag = f"{coro.__name__}.{moniker}.{os.getpid()}")
-
-        while True:
-            await asyncio.Future()
+        await msg.nack(requeue=False)
 
 
 async def spawn_agents():
 
     async with asyncio.TaskGroup() as g:
         for moniker in CxOneFlowConfig.get_service_monikers():
-            g.create_task(agent(process_poll, moniker, WorkflowStateService.QUEUE_SCAN_POLLING))
-            g.create_task(agent(process_pr_annotate, moniker, WorkflowStateService.QUEUE_ANNOTATE_PR))
-            g.create_task(agent(process_pr_feedback, moniker, WorkflowStateService.QUEUE_FEEDBACK_PR))
-   
+            services = CxOneFlowConfig.retrieve_services_by_moniker(moniker)
+            g.create_task(
+                mq_agent(
+                    process_poll,
+                    await services.pr.mq_client(),
+                    moniker,
+                    PRFeedbackService.QUEUE_SCAN_POLLING,
+                )
+            )
+            g.create_task(
+                mq_agent(
+                    process_pr_annotate,
+                    await services.pr.mq_client(),
+                    moniker,
+                    PRFeedbackService.QUEUE_ANNOTATE_PR,
+                )
+            )
+            g.create_task(
+                mq_agent(
+                    process_pr_feedback,
+                    await services.pr.mq_client(),
+                    moniker,
+                    PRFeedbackService.QUEUE_FEEDBACK_PR,
+                )
+            )
+            g.create_task(
+                mq_agent(
+                    ResolverResultsAgent(services),
+                    await services.resolver.mq_client(),
+                    moniker,
+                    ResolverScanService.QUEUE_RESOLVER_COMPLETE,
+                )
+            )
+            g.create_task(
+                mq_agent(
+                    ResolverTimeoutAgent(services),
+                    await services.resolver.mq_client(),
+                    moniker,
+                    ResolverScanService.QUEUE_RESOLVER_TIMEOUT,
+                )
+            )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         CxOneFlowConfig.bootstrap(get_config_path())
         asyncio.run(spawn_agents())
     except ConfigurationException as ce:
         __log.exception(ce)
-
-
-

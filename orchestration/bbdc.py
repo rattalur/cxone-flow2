@@ -3,11 +3,11 @@ from api_utils.auth_factories import EventContext
 from api_utils import signature
 from jsonpath_ng import parse
 from .exceptions import OrchestrationException
-from cxone_service import CxOneService
 from scm_services import SCMService
-from scm_services.cloner import Cloner
-from workflows.state_service import WorkflowStateService
-from cxone_api.scanning import ScanInspector
+from cxone_api.high.scans import ScanInspector
+from services import CxOneFlowServices
+from typing import List, Dict
+from workflows.utils import AdditionalScanContentWriter
 
 class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
@@ -37,6 +37,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
     @property
     def config_key(self):
         return "bbdc"
+    
 
     def __init__(self, event_context : EventContext):
         OrchestratorBase.__init__(self, event_context)
@@ -70,22 +71,28 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
             return False
         
         hashalg,hash = sig.split("=")
-        payload_hash = signature.get(hashalg, shared_secret, self.event_context.raw_event_payload)
+        payload_hash = signature.hmac(hashalg, shared_secret, self.event_context.raw_event_payload)
 
         return hash == payload_hash
 
 
-    async def __workflow_dispatcher(self, dispatch_map : dict, cxone_service : CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService):
+    async def __workflow_dispatcher(self, dispatch_map : dict, services : CxOneFlowServices, additional_content : List[AdditionalScanContentWriter]=None, 
+                                    scan_tags : Dict[str, str]=None):
         if self.__event not in dispatch_map.keys():
             BitBucketDataCenterOrchestrator.log().error(f"Unhandled event type: {self.__event}")
             return 
         
-        return await dispatch_map[self.__event](self, cxone_service, scm_service, workflow_service)
+        return await dispatch_map[self.__event](self, services, additional_content, scan_tags)
 
-    async def execute(self, cxone_service : CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService):
-        return await self.__workflow_dispatcher(BitBucketDataCenterOrchestrator.__workflow_map, cxone_service, scm_service, workflow_service)
+    async def execute(self, services : CxOneFlowServices):
+        return await self.__workflow_dispatcher(BitBucketDataCenterOrchestrator.__workflow_map, services)
 
-    async def _execute_push_scan_workflow(self, cxone_service : CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService):
+    async def execute_deferred(self, services : CxOneFlowServices, additional_content : List[AdditionalScanContentWriter], scan_tags : Dict[str, str]=None):
+        self.deferred_scan = True
+        return await self.__workflow_dispatcher(BitBucketDataCenterOrchestrator.__workflow_map, services, additional_content, scan_tags)
+
+    async def _execute_push_scan_workflow(self, services : CxOneFlowServices, additional_content : List[AdditionalScanContentWriter]=None, 
+                                          scan_tags : Dict[str, str]=None):
 
         self.__source_branch = self.__target_branch = None
         self.__source_hash = self.__target_hash = None
@@ -103,7 +110,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         self.__repo_slug = BitBucketDataCenterOrchestrator.__push_repo_slug_query.find(self.event_context.message)[0].value
         self.__repo_name = BitBucketDataCenterOrchestrator.__push_repo_name_query.find(self.event_context.message)[0].value
         
-        return await OrchestratorBase._execute_push_scan_workflow(self, cxone_service, scm_service, workflow_service)
+        return await OrchestratorBase._execute_push_scan_workflow(self, services, additional_content, scan_tags)
 
     async def __is_pr_draft(self) -> bool:
         return bool(BitBucketDataCenterOrchestrator.__pr_draft_query.find(self.event_context.message)[0].value)
@@ -132,21 +139,22 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         else:
             self.__pr_status = "/".join(statuses)
 
-    async def _execute_pr_scan_workflow(self, cxone_service : CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService) -> ScanInspector:
+    async def _execute_pr_scan_workflow(self, services : CxOneFlowServices, additional_content : List[AdditionalScanContentWriter]=None, 
+                                        scan_tags : Dict[str, str]=None) -> ScanInspector:
         if await self.__is_pr_draft():
             BitBucketDataCenterOrchestrator.log().info(f"Skipping draft PR {BitBucketDataCenterOrchestrator.__pr_self_link_query.find(self.event_context.message)[0].value}")
             return
         self.__populate_common_pr_data()
-        return await OrchestratorBase._execute_pr_scan_workflow(self, cxone_service, scm_service, workflow_service)
+        return await OrchestratorBase._execute_pr_scan_workflow(self, services, additional_content, scan_tags)
 
-    async def _execute_pr_tag_update_workflow(self, cxone_service : CxOneService, scm_service : SCMService, workflow_service : WorkflowStateService):
+    async def _execute_pr_tag_update_workflow(self, services : CxOneFlowServices, *args):
         if await self.__is_pr_draft():
             BitBucketDataCenterOrchestrator.log().info(f"Skipping draft PR {BitBucketDataCenterOrchestrator.__pr_self_link_query.find(self.event_context.message)[0].value}")
             return
 
         self.__populate_common_pr_data()
 
-        return await OrchestratorBase._execute_pr_tag_update_workflow(self, cxone_service, scm_service, workflow_service)
+        return await OrchestratorBase._execute_pr_tag_update_workflow(self, services)
 
 
     async def _get_target_branch_and_hash(self) -> tuple:

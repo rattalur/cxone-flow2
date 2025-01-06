@@ -1,6 +1,5 @@
 \documentclass[a4paper, 11pt, oneside]{book}
 \usepackage[a4paper, total={6.5in, 10in}]{geometry}
-\usepackage{hyperref}
 \usepackage[svgnames]{xcolor}
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc}
@@ -17,7 +16,20 @@
 \usepackage{amssymb, amsmath}
 \usepackage[many]{tcolorbox}
 \usepackage{placeins}
+\usepackage{parskip}
+\usepackage{dirtree}
+\usepackage[T1]{fontenc}
+
+
+% LuxiMono for \texttt
+\renewcommand{\ttdefault}{ul9}
+
+\input{command_defs.tex}
+
 \tcbuselibrary{listings}
+
+\setlength{\parindent}{0pt}
+
 
 \hypersetup{
   colorlinks=true,
@@ -25,7 +37,7 @@
   urlcolor=green!70!black
 }
 
-\newcommand{\cxoneflow}{\href{https://github.com/checkmarx-ts/cxone-flow}{\textbf{CxOneFlow}}\space}
+
 
 \begin{document}
 
@@ -43,7 +55,6 @@
 
 
 \tableofcontents
-
 
 \newtcblisting{xml}[3]{
     listing only,
@@ -81,14 +92,21 @@
 \input{scms/bbdc.tex}
 \input{scms/gh.tex}
 
-\part{Feedback Workflows}\label{part:feedback-workflows}
-\input{workflows/all.tex}
+\part{Advanced Workflows}\label{part:advanced-workflows}
+\input{resolver/all.tex}
+
+\part{Asynchronous Messaging Workflows}\label{part:workflows}
+\input{workflows/feedback.tex}
+\input{workflows/resolver.tex}
+\input{workflows/general.tex}
+
 
 \part{Appendices}
 \appendix
 \input{release_notes.tex}
 \input{appendix/systemd_service.tex}
 \input{appendix/ha.tex}
+\input{appendix/upgrading.tex}
 \input{appendix/endpoint_monikers.tex}
 \input{appendix/troubleshooting.tex}
 \input{appendix/amqp.tex}

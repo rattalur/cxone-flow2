@@ -1,7 +1,7 @@
 import os, tempfile, shutil, shlex, subprocess, asyncio, logging, urllib, base64, re
 from cxoneflow_logging import SecretRegistry
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Coroutine
 from api_utils.auth_factories import GithubAppAuthFactory
 from api_utils.auth_factories import EventContext
 
@@ -14,16 +14,17 @@ class CloneWorker:
     __stderr_auth_fail = re.compile(".*Invalid username or password.*")
     __auth_fail_exit_code = 128
 
-    def __init__(self, clone_thread, clone_dest_path):
+    def __init__(self, clone_thread : Coroutine, temp_dir_obj : tempfile.TemporaryDirectory, clone_dest_path : str):
         self.__log = logging.getLogger(f"CloneWorker:{clone_dest_path}")
         self.__clone_out_tempdir = clone_dest_path
+        self.__temp_dir_object = temp_dir_obj
         self.__clone_thread = clone_thread
 
     async def loc(self) -> str:
         try:
             completed = await self.__clone_thread
             self.__log.debug(f"Clone task: return code [{completed.returncode}] stdout: [{completed.stdout}] stderr: [{completed.stderr}]")
-            return self.__clone_out_tempdir.name
+            return self.__clone_out_tempdir
         except subprocess.CalledProcessError as ex:
             if CloneWorker.__stderr_auth_fail.match(ex.stderr.decode('UTF-8').replace("\n", "")) and \
                 ex.returncode == CloneWorker.__auth_fail_exit_code:
@@ -36,8 +37,9 @@ class CloneWorker:
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        self.__log.debug(f"Cleanup: {self.__clone_out_tempdir}")
-        self.__clone_out_tempdir.cleanup()
+        if self.__temp_dir_object is not None:
+            self.__log.debug(f"Cleanup: {self.__clone_out_tempdir}")
+            self.__temp_dir_object.cleanup()
 
 
 class Cloner:
@@ -47,8 +49,14 @@ class Cloner:
     __http_protocols = ['http', 'https']
     __ssh_protocols = ['ssh']
 
-    def __init__(self):
-        self.__env = dict(os.environ)
+    def __init__(self, ssl_no_verify : bool):
+        self.__additional_env = {"GIT_SSL_NO_VERIFY" : str(ssl_no_verify).lower()}
+
+    @property
+    def __running_env(self):
+        ret_env = dict(os.environ)
+        ret_env.update(self.__additional_env)
+        return ret_env
 
     @classmethod
     def log(clazz) -> logging.Logger:
@@ -61,15 +69,15 @@ class Cloner:
         return urllib.parse.urlunsplit((split.scheme, new_netloc, split.path, split.query, split.fragment))
         
     @staticmethod
-    def using_basic_auth(username : str, password : str, in_header : bool=False):
+    def using_basic_auth(username : str, password : str, ssl_no_verify : bool, in_header : bool=False):
         Cloner.log().debug("Clone config: using_basic_auth")
 
 
         if not in_header:
-            retval = BasicAuthWithCredsInUrl(username, SecretRegistry.register(password))
+            retval = BasicAuthWithCredsInUrl(username, SecretRegistry.register(password), ssl_no_verify)
             retval.__clone_cmd_stub = ["git", "clone"]
         else:
-            retval = Cloner()
+            retval = Cloner(ssl_no_verify)
             encoded_creds = SecretRegistry.register(base64.b64encode(f"{username}:{password}".encode('UTF8')).decode('UTF8'))
             retval.__clone_cmd_stub = ["git", "clone", "-c", f"http.extraHeader=Authorization: Basic {encoded_creds}"]
 
@@ -80,10 +88,10 @@ class Cloner:
         return retval
 
     @staticmethod
-    def using_token_auth(token : str):
+    def using_token_auth(token : str, ssl_no_verify : bool):
         Cloner.log().debug("Clone config: using_token_auth")
 
-        retval = Cloner()
+        retval = Cloner(ssl_no_verify)
         retval.__protocol_matcher = Cloner.__https_matcher
         retval.__supported_protocols = Cloner.__http_protocols
         retval.__port = None
@@ -95,7 +103,7 @@ class Cloner:
     def using_ssh_auth(ssh_private_key_file : Path, ssh_port : int):
         Cloner.log().debug("Clone config: using_ssh_auth")
 
-        retval = Cloner()
+        retval = Cloner(False)
         retval.__protocol_matcher = Cloner.__ssh_matcher
         retval.__supported_protocols = Cloner.__ssh_protocols
         retval.__port = ssh_port
@@ -104,16 +112,16 @@ class Cloner:
                 shutil.copyfileobj(source, dest)
                 retval.__keyfile = dest.file.name
 
-        retval.__env['GIT_SSH_COMMAND'] = f"ssh -i '{shlex.quote(retval.__keyfile)}' -oIdentitiesOnly=yes -oStrictHostKeyChecking=accept-new -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa"
+        retval.__additional_env['GIT_SSH_COMMAND'] = f"ssh -i '{shlex.quote(retval.__keyfile)}' -oIdentitiesOnly=yes -oStrictHostKeyChecking=accept-new -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa"
         retval.__clone_cmd_stub = ["git", "clone"]
 
         return retval
     
     @staticmethod
-    def using_github_app_auth(gh_auth_factory : GithubAppAuthFactory):
+    def using_github_app_auth(gh_auth_factory : GithubAppAuthFactory, ssl_no_verify : bool):
         Cloner.log().debug("Clone config: using_github_app_auth")
 
-        retval = GithubAppCloner(gh_auth_factory)
+        retval = GithubAppCloner(gh_auth_factory, ssl_no_verify)
         retval.__protocol_matcher = Cloner.__https_matcher
         retval.__supported_protocols = Cloner.__http_protocols
         retval.__port = None
@@ -141,21 +149,22 @@ class Cloner:
     async def _get_clone_cmd_stub(self, event_context : Dict=None, api_url : str=None, force_reauth : bool=False) -> List:
         return self.__clone_cmd_stub
     
-    async def clone(self, clone_url, event_context : EventContext=None, force_reauth : bool=False) -> CloneWorker:
+    async def clone(self, clone_url, event_context : EventContext=None, force_reauth : bool=False, temp_root : str=None, make_temp : bool=True) -> CloneWorker:
         Cloner.log().debug(f"Clone Execution for: {clone_url}")
 
         fixed_clone_url = await self._fix_clone_url(clone_url, event_context, force_reauth)
-        clone_output_loc = tempfile.TemporaryDirectory(delete=False)
-        cmd = await self._get_clone_cmd_stub(event_context, force_reauth) + [fixed_clone_url, clone_output_loc.name]
+        temp_dir_object = tempfile.TemporaryDirectory(delete=False, prefix=temp_root) if make_temp else None
+        clone_output_loc = temp_dir_object.name if make_temp else temp_root
+        cmd = await self._get_clone_cmd_stub(event_context, force_reauth) + [fixed_clone_url, clone_output_loc]
         Cloner.log().debug(cmd)
-        thread = asyncio.to_thread(subprocess.run, cmd, capture_output=True, env=self.__env, check=True)
+        thread = asyncio.to_thread(subprocess.run, cmd, capture_output=True, env=self.__running_env, check=True)
         
-        return CloneWorker(thread, clone_output_loc)
+        return CloneWorker(thread, temp_dir_object, clone_output_loc)
 
     async def reset_head(self, code_path, hash):
         try:
             result = await (asyncio.to_thread(subprocess.run, ["git", "reset", "--hard", hash], \
-                                capture_output=True, env=self.__env, check=True, cwd=code_path))
+                                capture_output=True, env=self.__running_env, check=True, cwd=code_path))
             
             self.log().debug(f"Reset task: return code [{result.returncode}] stdout: [{result.stdout}] stderr: [{result.stderr}]")
 
@@ -164,8 +173,8 @@ class Cloner:
             raise
 
 class BasicAuthWithCredsInUrl(Cloner):
-    def __init__(self, username : str, password : str):
-        Cloner.__init__(self)
+    def __init__(self, username : str, password : str, ssl_no_verify : bool):
+        Cloner.__init__(self, ssl_no_verify)
         self.__username = username
         self.__password = password
 
@@ -174,8 +183,8 @@ class BasicAuthWithCredsInUrl(Cloner):
 
 
 class GithubAppCloner(Cloner):
-    def __init__(self, auth_factory : GithubAppAuthFactory):
-        Cloner.__init__(self)
+    def __init__(self, auth_factory : GithubAppAuthFactory, ssl_no_verify : bool):
+        Cloner.__init__(self, ssl_no_verify)
         self.__auth_factory = auth_factory
 
     async def _fix_clone_url(self, clone_url : str, event_context : EventContext=None, force_reauth : bool=False):
