@@ -94,23 +94,28 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
     async def _execute_push_scan_workflow(self, services : CxOneFlowServices, additional_content : List[AdditionalScanContentWriter]=None, 
                                           scan_tags : Dict[str, str]=None):
 
-        self.__source_branch = self.__target_branch = None
-        self.__source_hash = self.__target_hash = None
+        labels = await self._get_repository_labels(services.scm,BitBucketDataCenterOrchestrator.__push_repo_project_key_query.find(self.event_context.message)[0].value,BitBucketDataCenterOrchestrator.__push_repo_slug_query.find(self.event_context.message)[0].value)
+        if any("-noapp" in label or "-migrated" in label or "-obsolete" in label for label in labels):
+            BitBucketDataCenterOrchestrator.log().info(f"Skipping PR due to repository labels: {labels}")
+            return
+        else:
+            self.__source_branch = self.__target_branch = None
+            self.__source_hash = self.__target_hash = None
 
-        if len([x.value for x in BitBucketDataCenterOrchestrator.__push_change_types_query.find(self.event_context.message) \
-                if x.value in BitBucketDataCenterOrchestrator.__push_scannable_change_types]) > 0:
+            if len([x.value for x in BitBucketDataCenterOrchestrator.__push_change_types_query.find(self.event_context.message) \
+                    if x.value in BitBucketDataCenterOrchestrator.__push_scannable_change_types]) > 0:
+                
+                first_change = BitBucketDataCenterOrchestrator.__push_changes_extract_query.find(self.event_context.message)[0].value
+
+                self.__source_branch = self.__target_branch = first_change['ref']['displayId']
+                self.__source_hash = self.__target_hash = first_change['toHash']
+
+            self.__repo_project_key = BitBucketDataCenterOrchestrator.__push_repo_project_key_query.find(self.event_context.message)[0].value
+            self.__repo_project_name = BitBucketDataCenterOrchestrator.__push_repo_project_name_query.find(self.event_context.message)[0].value
+            self.__repo_slug = BitBucketDataCenterOrchestrator.__push_repo_slug_query.find(self.event_context.message)[0].value
+            self.__repo_name = BitBucketDataCenterOrchestrator.__push_repo_name_query.find(self.event_context.message)[0].value
             
-            first_change = BitBucketDataCenterOrchestrator.__push_changes_extract_query.find(self.event_context.message)[0].value
-
-            self.__source_branch = self.__target_branch = first_change['ref']['displayId']
-            self.__source_hash = self.__target_hash = first_change['toHash']
-
-        self.__repo_project_key = BitBucketDataCenterOrchestrator.__push_repo_project_key_query.find(self.event_context.message)[0].value
-        self.__repo_project_name = BitBucketDataCenterOrchestrator.__push_repo_project_name_query.find(self.event_context.message)[0].value
-        self.__repo_slug = BitBucketDataCenterOrchestrator.__push_repo_slug_query.find(self.event_context.message)[0].value
-        self.__repo_name = BitBucketDataCenterOrchestrator.__push_repo_name_query.find(self.event_context.message)[0].value
-        
-        return await OrchestratorBase._execute_push_scan_workflow(self, services, additional_content, scan_tags)
+            return await OrchestratorBase._execute_push_scan_workflow(self, services, additional_content, scan_tags)
 
     async def __is_pr_draft(self) -> bool:
         return bool(BitBucketDataCenterOrchestrator.__pr_draft_query.find(self.event_context.message)[0].value)
@@ -141,11 +146,16 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
 
     async def _execute_pr_scan_workflow(self, services : CxOneFlowServices, additional_content : List[AdditionalScanContentWriter]=None, 
                                         scan_tags : Dict[str, str]=None) -> ScanInspector:
-        if await self.__is_pr_draft():
-            BitBucketDataCenterOrchestrator.log().info(f"Skipping draft PR {BitBucketDataCenterOrchestrator.__pr_self_link_query.find(self.event_context.message)[0].value}")
+        labels = await self._get_repository_labels(services.scm, BitBucketDataCenterOrchestrator.__pr_repo_project_key_query.find(self.event_context.message)[0].value, BitBucketDataCenterOrchestrator.__pr_repo_slug_query.find(self.event_context.message)[0].value)
+        if any("-noapp" in label or "-migrated" in label or "-obsolete" in label for label in labels):
+            BitBucketDataCenterOrchestrator.log().info(f"Skipping PR due to repository labels: {labels}")
             return
-        self.__populate_common_pr_data()
-        return await OrchestratorBase._execute_pr_scan_workflow(self, services, additional_content, scan_tags)
+        else:
+            if await self.__is_pr_draft():
+                BitBucketDataCenterOrchestrator.log().info(f"Skipping draft PR {BitBucketDataCenterOrchestrator.__pr_self_link_query.find(self.event_context.message)[0].value}")
+                return
+            self.__populate_common_pr_data()
+            return await OrchestratorBase._execute_pr_scan_workflow(self, services, additional_content, scan_tags)
 
     async def _execute_pr_tag_update_workflow(self, services : CxOneFlowServices, *args):
         if await self.__is_pr_draft():
@@ -190,15 +200,19 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         
         return json['displayId'] if "displayId" in json.keys() else ""
 
-    async def _get_repository_labels(self, project: str, slug: str) -> list:
-        labels_resp = await self.exec("GET", f"/rest/api/latest/projects/{project}/repos/{slug}/labels")
+    async def _get_repository_labels(self, scm_service : SCMService, project: str, slug: str) -> list:
+        labels_resp = await scm_service.exec("GET", f"/rest/api/latest/projects/{project}/repos/{slug}/labels")
 
         if not labels_resp.ok:
             raise OrchestrationException.from_response(labels_resp)
 
+        # Extract the 'values' key from the JSON response
         json = labels_resp.json()
+        values = json['values']
+        # Use a list comprehension to extract the 'name' of each label
+        label_names = [label['name'] for label in values]
         
-        return [label['name'] for label in json] if 'values' in json.keys() else []
+        return label_names
 
     async def get_cxone_project_name(self) -> str:
         return f"{self._repo_project_key}/{self._repo_name}"
