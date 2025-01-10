@@ -190,9 +190,18 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         
         return json['displayId'] if "displayId" in json.keys() else ""
 
+    async def _get_repository_labels(self, project: str, slug: str) -> list:
+        labels_resp = await self.exec("GET", f"/rest/api/latest/projects/{project}/repos/{slug}/labels")
+
+        if not labels_resp.ok:
+            raise OrchestrationException.from_response(labels_resp)
+
+        json = labels_resp.json()
+        
+        return [label['name'] for label in json] if 'values' in json.keys() else []
 
     async def get_cxone_project_name(self) -> str:
-        return f"{self._repo_project_key}/{self.__repo_project_name}/{self._repo_name}"
+        return f"{self._repo_project_key}/{self._repo_name}"
 
     @property
     def _pr_state(self) -> str:
