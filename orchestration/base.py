@@ -157,7 +157,8 @@ class OrchestratorBase:
     async def __orchestrate_scan(self, services : CxOneFlowServices, scan_tags : dict, workflow : ScanWorkflow, 
                                  additional_content : List[AdditionalScanContentWriter]) -> Tuple[ScanInspector, ScanAction]:
         protected_branches = await self._get_protected_branches(services.scm)
-
+        labels = await self._get_repository_labels(services.scm,self._repo_project_key,self._repo_name) 
+        
         target_branch, target_hash = await self._get_target_branch_and_hash()
         source_branch, source_hash = await self._get_source_branch_and_hash()
         clone_url = self._repo_clone_url(services.scm.cloner)
@@ -166,7 +167,7 @@ class OrchestratorBase:
             raise OrchestrationException("Clone URL could not be determined.")
 
         if target_branch in protected_branches:
-            project_config = await services.cxone.load_project_config(await self.get_cxone_project_name())
+            project_config = await services.cxone.load_project_config(await self.get_cxone_project_name(),labels)
 
             if not self.deferred_scan and not services.resolver.skip and await services.cxone.sca_selected(project_config, source_branch):
                 try:

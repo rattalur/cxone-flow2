@@ -103,12 +103,12 @@ class CxOneService:
         return 'sca' in (await self.__get_engine_config_for_scan(project_config, branch)).keys()
        
 
-    async def __create_or_retrieve_project(self, project_name : str) -> dict:
+    async def __create_or_retrieve_project(self, project_name : str, labels : list) -> dict:
         projects_response = CxOneService.__get_json_or_fail (await retrieve_list_of_projects(self.__client, name=project_name))
 
         if int(projects_response['filteredTotalCount']) == 0:
             project_json = CxOneService.__get_json_or_fail (await create_a_project (self.__client, \
-                name=project_name, origin=__agent__, tags=self.__default_project_tags | {"cxone-flow" : __version__, "service" : self.moniker}))
+                name=project_name, origin=__agent__, tags=self.__default_project_tags | {label: "" for label in labels} ))
             project_id = project_json['id']
         else:
             project_json = projects_response['projects'][0]
@@ -145,8 +145,8 @@ class CxOneService:
         
         return return_engine_config
     
-    async def load_project_config(self, project_name : str) -> ProjectRepoConfig:
-        return await ProjectRepoConfig.from_project_json(self.__client, await self.__create_or_retrieve_project(project_name))
+    async def load_project_config(self, project_name : str, labels : list) -> ProjectRepoConfig:
+        return await ProjectRepoConfig.from_project_json(self.__client, await self.__create_or_retrieve_project(project_name,labels))
 
     async def execute_scan(self, zip_path : str, project_config : ProjectRepoConfig, commit_branch : str, repo_url : str, scan_tags : dict ={}):
         engine_config = await self.__get_engine_config_for_scan(project_config, commit_branch)
