@@ -37,6 +37,8 @@ class PullRequestDecoration:
         "informational" : "INFO"
     }
 
+    __default_emoji = "❓"
+
     @staticmethod
     def matches_identifier(text : str):
         return PullRequestDecoration.__comment_match.match(text.replace("\n", ""))
