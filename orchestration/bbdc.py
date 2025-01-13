@@ -215,7 +215,7 @@ class BitBucketDataCenterOrchestrator(OrchestratorBase):
         return label_names
 
     async def get_cxone_project_name(self) -> str:
-        return f"{self._repo_project_key}/{self._repo_name}"
+        return f"{self._repo_project_key}/{self._repo_name}".lower()
 
     @property
     def _pr_state(self) -> str:
